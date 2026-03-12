@@ -50,10 +50,14 @@ def _topological_sort(deps: Dict[str, List[str]]) -> List[str]:
         perm_marks.add(n)
         result.append(n)
 
+    # iterate in insertion order of deps dict, which matches pipeline definition order
     for node in deps:
         if node not in perm_marks:
             visit(node)
-    return list(reversed(result))
+    # the algorithm above already appends nodes in a valid order (dependencies first),
+    # so no need to reverse the result. Reversing caused nodes without dependencies to
+    # appear in reverse of their original order.
+    return result
 
 
 class Pipeline:
@@ -81,8 +85,17 @@ class Pipeline:
         node_factory = node_factory or NodeFactory()
         # build graph
         deps = {}
-        for d in pd.nodes:
+        # capture original ordering while constructing deps
+        for idx, d in enumerate(pd.nodes):
             deps[d.node_id] = list(d.depends_on)
+        # if a node has no explicit dependencies, link it to its immediate
+        # predecessor to preserve definition order as a default execution
+        # behavior. This makes simple pipelines run sequentially without
+        # requiring the user to manually specify depends_on lists.
+        for idx, d in enumerate(pd.nodes):
+            if idx > 0 and not deps.get(d.node_id):
+                prev = pd.nodes[idx - 1]
+                deps[d.node_id].append(prev.node_id)
         sorted_ids = _topological_sort(deps)
         # instantiate nodes in order
         nodes = []
@@ -227,10 +240,24 @@ class Pipeline:
 
         # build dependency map from attached definitions
         deps = {}
-        for node in self.nodes:
+        # preserve ordering of self.nodes when building map
+        for idx, node in enumerate(self.nodes):
             nid = getattr(node, 'definition', None).node_id if hasattr(node, 'definition') else None
             if nid is not None:
                 deps[nid] = list(getattr(node.definition, 'depends_on', []))
+        # add implicit sequential links for nodes without any explicit
+        # dependencies so that pipelines defined as simple ordered lists
+        # still execute in order rather than being eligible for parallel
+        # scheduling.
+        for idx, node in enumerate(self.nodes):
+            nid = getattr(node, 'definition', None).node_id if hasattr(node, 'definition') else None
+            if nid is None:
+                continue
+            if not deps.get(nid) and idx > 0:
+                prev = self.nodes[idx - 1]
+                prev_id = getattr(prev, 'definition', None).node_id if hasattr(prev, 'definition') else None
+                if prev_id is not None:
+                    deps[nid].append(prev_id)
 
         in_progress = {}
         completed = set()
