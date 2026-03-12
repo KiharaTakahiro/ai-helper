@@ -32,6 +32,7 @@ class NodeDefinition:
         depends_on: Optional[List[str]] = None,
         retry_count: int = 0,
         retry_delay: float = 0.0,
+        requires_gpu: bool = False,
     ):
         # backward compatibility: allow ``type`` and ``order`` parameters
         if node_type is None and type is not None:
@@ -44,6 +45,7 @@ class NodeDefinition:
         self.depends_on = depends_on or []
         self.retry_count = retry_count
         self.retry_delay = retry_delay
+        self.requires_gpu = requires_gpu
         # determine node_id
         if node_id is not None:
             self.node_id = node_id
@@ -66,14 +68,14 @@ class NodeDefinition:
             and self.config == other.config
             and self.depends_on == other.depends_on
             and self.retry_count == other.retry_count
-            and self.retry_delay == other.retry_delay
-        )
+            and self.retry_delay == other.retry_delay            and self.requires_gpu == other.requires_gpu        )
 
     def __repr__(self):
         return (
             f"NodeDefinition(node_id={self.node_id!r}, node_type={self.node_type!r}, "
             f"config={self.config!r}, depends_on={self.depends_on!r}, "
-            f"retry_count={self.retry_count}, retry_delay={self.retry_delay})"
+            f"retry_count={self.retry_count}, retry_delay={self.retry_delay}, "
+            f"requires_gpu={self.requires_gpu})"
         )
 
 

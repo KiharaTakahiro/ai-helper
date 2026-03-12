@@ -11,6 +11,15 @@ from ai_helper.core.context import Context
 from ai_helper.artifact.repository import ArtifactRepository
 from ai_helper.core.node import Node
 
+# GPU availability helper (same logic as in node_executor for consistency)
+def _gpu_available():
+    try:
+        import torch
+
+        return torch.cuda.is_available()
+    except ImportError:
+        return False
+
 
 def _topological_sort(deps: Dict[str, List[str]]) -> List[str]:
     """依存関係グラフをトポロジカルソートする。
@@ -195,10 +204,12 @@ class Pipeline:
                             raise ValueError(
                                 f"Node {node.__class__.__name__} requires artifact '{inp}'"
                             )
+                    # use executor for consistency
                     if nr_repo is not None:
                         last_node_run = nr_repo.create(pr.id, node.__class__.__name__)
                         nr_repo.update_status(last_node_run.id, "RUNNING")
-                    node.run(context, artifact_repo)
+                    # direct call since we only have node instance
+                    node_executor.execute(node, context, pipeline_run_id=pr.id if pr_repo is not None else None)
                     if nr_repo is not None and last_node_run is not None:
                         nr_repo.update_status(last_node_run.id, "SUCCESS", finished_at=datetime.datetime.now(datetime.UTC))
                 if pr_repo is not None:
@@ -222,52 +233,18 @@ class Pipeline:
         completed = set()
         lock = threading.Lock()
 
+        # use NodeExecutor for actual execution logic
+        from ai_helper.core.node_executor import NodeExecutor
+        node_executor = NodeExecutor(artifact_repo, db_session=db_session)
+
         def _execute(node: Node):
             nonlocal pr_repo, nr_repo, pr
             nid = getattr(node, 'definition', None).node_id if hasattr(node, 'definition') else node.__class__.__name__
-            # metrics
-            start = time.perf_counter()
-            tracemalloc.start()
-            last_run = None
-            if nr_repo is not None:
-                last_run = nr_repo.create(pr.id, node.__class__.__name__)
-                nr_repo.update_status(last_run.id, "RUNNING")
-            # call with retries
-            attempts = 0
-            while True:
-                try:
-                    # type validation before
-                    self._validate_types(node, context, artifact_repo)
-                    node.run(context, artifact_repo)
-                    # type validation after
-                    self._check_output_types(node, context, artifact_repo)
-                    break
-                except Exception as e:
-                    attempts += 1
-                    if attempts > getattr(node.definition, 'retry_count', 0):
-                        raise
-                    time.sleep(getattr(node.definition, 'retry_delay', 0))
-            # metrics finish
-            current, peak = tracemalloc.get_traced_memory()
-            tracemalloc.stop()
-            elapsed = time.perf_counter() - start
-            # update run record with success and metrics
-            if nr_repo is not None and last_run is not None:
-                nr_repo.update_status(
-                    last_run.id,
-                    "SUCCESS",
-                    finished_at=datetime.datetime.now(datetime.UTC),
-                    execution_time=elapsed,
-                    memory_usage=peak,
-                )
+            # delegate to executor (it handles retries, GPU, metrics, logging etc.)
+            outputs = node_executor.execute(node, context, pipeline_run_id=pr.id if pr_repo is not None else None)
             with lock:
                 completed.add(nid)
-            # return outputs for caching
-            if isinstance(node.outputs, dict):
-                out_names = list(node.outputs.keys())
-            else:
-                out_names = list(node.outputs)
-            return {name: context.artifacts.get(name) for name in out_names}
+            return outputs
 
         # executor for parallel tasks
         executor = ThreadPoolExecutor()
@@ -323,3 +300,41 @@ class Pipeline:
         # success
         if pr_repo is not None:
             pr_repo.update_status(pr.id, "SUCCESS", finished_at=datetime.datetime.now(datetime.UTC))
+
+    # debug helpers ---------------------------------------------------
+
+    def run_node(self, node_id: str, context: Context, artifact_repo: ArtifactRepository, db_session=None):
+        """単一ノードをデバッグ実行する。"""
+        # find node instance by id
+        if not hasattr(self, "_node_map"):
+            raise ValueError("pipeline has no node map")
+        node = self._node_map.get(node_id)
+        if node is None:
+            raise KeyError(f"node '{node_id}' not found")
+        from ai_helper.core.node_executor import NodeExecutor
+
+        executor = NodeExecutor(artifact_repo, db_session=db_session)
+        return executor.execute(node, context)
+
+    def run_until(self, node_id: str, context: Context, artifact_repo: ArtifactRepository, db_session=None):
+        """依存順で指定ノードまで順次実行する。"""
+        if not hasattr(self, "_node_map"):
+            raise ValueError("pipeline has no node map")
+        from ai_helper.core.node_executor import NodeExecutor
+
+        executor = NodeExecutor(artifact_repo, db_session=db_session)
+        for node in self.nodes:
+            nid = getattr(node, "definition", None).node_id if hasattr(node, "definition") else None
+            executor.execute(node, context)
+            if nid == node_id:
+                break
+
+    def step_runner(self, context: Context, artifact_repo: ArtifactRepository, db_session=None):
+        """ジェネレータで1ノードずつ順番に実行するデバッグ用ステップ実行。"""
+        from ai_helper.core.node_executor import NodeExecutor
+
+        executor = NodeExecutor(artifact_repo, db_session=db_session)
+        for node in self.nodes:
+            nid = getattr(node, "definition", None).node_id if hasattr(node, "definition") else None
+            outputs = executor.execute(node, context)
+            yield nid, outputs

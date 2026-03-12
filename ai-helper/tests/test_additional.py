@@ -278,6 +278,83 @@ def test_node_retry(tmp_path):
     pipeline.run(ctx, repo)
     assert ctx.get_artifact("o") is not None
 
+# GPU support: nodes requiring GPU should be skipped when unavailable
+
+def test_gpu_skip(tmp_path):
+    repo = LocalArtifactRepository(base_dir=str(tmp_path / "store"))
+    ctx = Context()
+    class GpuNode(Node):
+        inputs = []
+        outputs = ["o"]
+        def run(self, context: Context, repo):
+            # should not be executed
+            raise RuntimeError("ran despite GPU requirement")
+    register_node("gpu", GpuNode)
+    nd = NodeDefinition(node_id="g1", node_type="gpu", config={}, depends_on=[], requires_gpu=True)
+    pd = PipelineDefinition(id="pgpu", nodes=[nd])
+    pipeline = Pipeline.from_definition(pd)
+    # the helper used by pipeline should return False in this environment
+    from ai_helper.core.node_executor import _gpu_available
+    assert not _gpu_available()
+    pipeline.run(ctx, repo)
+    # artifact should not be set
+    with pytest.raises(KeyError):
+        _ = ctx.get_artifact("o")
+
+# node executor standalone
+
+def test_node_executor_basic(tmp_path):
+    repo = LocalArtifactRepository(base_dir=str(tmp_path / "store"))
+    ctx = Context()
+    class Echo(Node):
+        inputs = []
+        outputs = ["o"]
+        def __init__(self, message):
+            self.message = message
+        def run(self, context: Context, repo):
+            aid = repo.save(self.message)
+            context.set_artifact("o", aid)
+    register_node("echo", Echo)
+    nd = NodeDefinition(node_id="e1", node_type="echo", config={"message": "hi"}, depends_on=[])
+    from ai_helper.core.node_executor import NodeExecutor
+    ne = NodeExecutor(repo)
+    outs = ne.execute(nd, ctx)
+    assert ctx.get_artifact("o") is not None
+    assert outs["o"] == ctx.get_artifact("o")
+
+# debug mode helpers
+
+def test_pipeline_debug_helpers(tmp_path):
+    repo = LocalArtifactRepository(base_dir=str(tmp_path / "store"))
+    ctx = Context()
+    class A(Node):
+        inputs = []
+        outputs = ["a"]
+        def run(self, context: Context, repo):
+            aid = repo.save("A")
+            context.set_artifact("a", aid)
+    class B(Node):
+        inputs = ["a"]
+        outputs = ["b"]
+        def run(self, context: Context, repo):
+            aid = repo.save("B")
+            context.set_artifact("b", aid)
+    register_node("A", A)
+    register_node("B", B)
+    n1 = NodeDefinition(node_id="n1", node_type="A", config={}, depends_on=[])
+    n2 = NodeDefinition(node_id="n2", node_type="B", config={}, depends_on=["n1"])
+    pipeline = Pipeline.from_definition(PipelineDefinition(id="pdbg", nodes=[n1, n2]))
+    # run single node n1
+    pipeline.run_node("n1", ctx, repo)
+    assert ctx.get_artifact("a") is not None
+    # run until n2
+    pipeline.run_until("n2", ctx, repo)
+    assert ctx.get_artifact("b") is not None
+    # step runner
+    ctx2 = Context()
+    seq = list(pipeline.step_runner(ctx2, repo))
+    assert seq[0][0] == "n1" and seq[1][0] == "n2"
+
 # parallel execution: two independent slow nodes
 
 def test_parallel_execution(tmp_path):
