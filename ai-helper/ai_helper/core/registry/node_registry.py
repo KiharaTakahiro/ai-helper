@@ -58,7 +58,14 @@ class NodeRegistry:
                     continue
                 for attr in dir(module):
                     obj = getattr(module, attr)
-                    if inspect.isclass(obj) and issubclass(obj, BaseNode) and obj is not BaseNode:
+                    if not inspect.isclass(obj):
+                        continue
+                    if obj is BaseNode:
+                        continue
+                    # ensure class was defined in this package (not imported)
+                    if not getattr(obj, "__module__", "").startswith(pkg_name):
+                        continue
+                    if issubclass(obj, BaseNode):
                         self.register_node(obj)
 
     def register_node(self, node_class: Type[BaseNode], name: Optional[str] = None):
@@ -70,6 +77,14 @@ class NodeRegistry:
         """
         if name is not None:
             node_class.name = name
+        # ignore abstract base classes themselves
+        if node_class in (BaseNode,):
+            return
+        # Node (旧クラス) もスキップ
+        from ai_helper.core.node import Node as LegacyNode
+        if node_class is LegacyNode:
+            return
+
         key = getattr(node_class, "name", None)
         if not key:
             # class name から自動生成
