@@ -12,9 +12,15 @@ from ai_helper.core.node.base_node import BaseNode
 class NodeRegistry:
     """ノードクラスの発見・保持を行うレジストリ。
 
-    ディレクトリやパッケージをスキャンして ``BaseNode`` 派生クラスを
-    自動登録し、名前やタグで検索できるようにする。プラグイン機能の
-    基盤としても機能する。
+    設定されたノード用パッケージ（デフォルトは ``ai_helper.nodes``）を
+    再帰的にスキャンし、見つかった ``BaseNode`` 派生クラスを自動的に
+    インポート & 登録する。これによりユーザーが ``nodes/`` 配下に
+    新しいノードを追加するだけで即時利用可能になる。
+
+    登録済みのノードは名前 (``get_node_by_name``) やタグ
+    (``get_nodes_by_tag``) で検索でき、手動登録/解除もサポートする。
+
+    プラグイン機能の基盤としても機能する。
     """
 
     def __init__(self, nodes_package: str = "ai_helper.nodes", extra_packages: Optional[List[str]] = None):
@@ -50,12 +56,15 @@ class NodeRegistry:
                 continue
             if not hasattr(pkg, "__path__"):
                 continue
-            for finder, modname, ispkg in pkgutil.walk_packages(pkg.__path__, pkg.__name__ + "."):
+            # pkgutil.walk_packages は再帰的にサブパッケージも巡るため
+        # nodes/ 以下全てを網羅的に読み込む。
+        for finder, modname, ispkg in pkgutil.walk_packages(pkg.__path__, pkg.__name__ + "."):
                 try:
                     module = importlib.import_module(modname)
                 except Exception:
                     # モジュール読み込み失敗は無視
                     continue
+                # 各モジュール内に定義されているクラスを調べる
                 for attr in dir(module):
                     obj = getattr(module, attr)
                     if not inspect.isclass(obj):
