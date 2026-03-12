@@ -11,7 +11,7 @@ from .core.registry import NodeFactory
 from .pipeline.models import NodeDefinition, PipelineDefinition
 from .pipeline.repository import PipelineRepository
 
-from .config.settings import get_settings
+from .infra.config.settings import get_settings
 
 __all__ = [
     "Context",

@@ -398,6 +398,40 @@ def test_gc(tmp_path):
     session.commit()
     repo.gc(max_age_seconds=1)
     assert not os.path.exists(base / (aid + ".bin"))
+
+
+def test_faceswap_pipeline(tmp_path):
+    """faceswap パイプライン定義が実行できることを確認するテスト。
+
+    パイプラインモジュールをインポートして ``pipeline`` オブジェクトを取得し、
+    実行後に最終出力アーティファクトが生成されているか検証する。
+    """
+    # モジュールをインポートすると各ノードが登録される
+    import ai_helper.pipelines.faceswap_pipeline as fp
+
+    pipeline = getattr(fp, "pipeline", None)
+    assert pipeline is not None
+
+    repo = LocalArtifactRepository(base_dir=str(tmp_path / "store"))
+    ctx = Context()
+    pipeline.run(ctx, repo)
+    # 最終ノード "encoded" 出力が存在すること
+    aid = ctx.get_artifact("encoded")
+    assert aid is not None
+    out = repo.load(aid)
+    assert isinstance(out, str) and out.startswith("encoded_")
+
+
+def test_cli_runner(tmp_path, monkeypatch, capsys):
+    """CLI スクリプトが指定したパイプラインを実行しログを出力することを確認する。"""
+    # パイプラインファイルの実際のパスを計算
+    script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "ai_helper", "pipelines", "faceswap_pipeline.py"))
+    from ai_helper.app.cli.run_pipeline import main
+    monkeypatch.setattr("sys.argv", ["run_pipeline.py", script_path])
+    main()
+    captured = capsys.readouterr()
+    assert "Pipeline finished" in captured.out
+
     assert meta.get(aid) is None
 
 # メトリクス記録
