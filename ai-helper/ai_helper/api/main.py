@@ -4,7 +4,7 @@ from ai_helper.core.context import Context
 from ai_helper.core.pipeline import Pipeline
 from ai_helper.core.registry import NodeFactory
 from ai_helper.pipeline.repository import PipelineRepository
-from ai_helper.core.artifact.local_repository import LocalArtifactRepository
+from ai_helper.infra.storage.local_repository import LocalArtifactRepository
 
 # DB ヘルパーとリポジトリ
 import ai_helper.db.session as dbsess

@@ -12,10 +12,10 @@ import datetime
 from ai_helper.core.context import Context
 from ai_helper.core.pipeline import Pipeline
 from ai_helper.core.node import Node
-from ai_helper.core.artifact.local_repository import LocalArtifactRepository
+from ai_helper.infra.storage.local_repository import LocalArtifactRepository
 from ai_helper.core.registry import register_node
-from ai_helper.db.session import create_sqlite_session
-from ai_helper.db.models import PipelineRun, NodeRun, Artifact
+from ai_helper.infra.db.session import create_sqlite_session
+from ai_helper.infra.db.models import PipelineRun, NodeRun, Artifact
 from ai_helper.repository import (
     PipelineRunRepository,
     NodeRunRepository,

@@ -3,7 +3,7 @@ from .core.node import Node
 from .core.pipeline import Pipeline
 
 from .core.artifact.repository import ArtifactRepository
-from .core.artifact.local_repository import LocalArtifactRepository
+from .infra.storage.local_repository import LocalArtifactRepository
 
 from .core.registry import register_node, get_node_class
 from .core.registry import NodeFactory

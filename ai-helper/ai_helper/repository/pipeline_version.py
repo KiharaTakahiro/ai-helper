@@ -1,6 +1,6 @@
 import uuid
 from sqlalchemy.orm import Session
-from ai_helper.db.models import Pipeline, PipelineVersion
+from ai_helper.infra.db.models import Pipeline, PipelineVersion
 import json
 
 

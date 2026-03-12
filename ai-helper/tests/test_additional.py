@@ -11,14 +11,14 @@ import datetime
 from ai_helper.core.context import Context
 from ai_helper.core.pipeline import Pipeline
 from ai_helper.core.node import Node
-from ai_helper.core.artifact.local_repository import LocalArtifactRepository
+from ai_helper.infra.storage.local_repository import LocalArtifactRepository
 from ai_helper.core.artifact.repository import ArtifactRepository
 from ai_helper.core.registry import register_node, get_node_class
 from ai_helper.core.registry import NodeFactory
 from ai_helper.pipeline.repository import PipelineRepository
 from ai_helper.pipeline.models import PipelineDefinition, NodeDefinition
-from ai_helper.config.settings import get_settings, Settings
-from ai_helper.db.session import create_sqlite_session
+from ai_helper.infra.config.settings import get_settings, Settings
+from ai_helper.infra.db.session import create_sqlite_session
 from ai_helper.repository import (
     PipelineRunRepository,
     NodeRunRepository,
@@ -26,7 +26,7 @@ from ai_helper.repository import (
     PipelineDefRepository,
     PipelineVersionRepository,
 )
-from ai_helper.db.models import PipelineRun, NodeRun, Artifact
+from ai_helper.infra.db.models import PipelineRun, NodeRun, Artifact
 
 
 # コンテキスト関連のテスト

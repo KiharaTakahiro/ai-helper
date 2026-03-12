@@ -7,7 +7,7 @@
 # コア機能が正常に動作することを確認し、結果的に関連コード行を網羅する。
 
 from ai_helper.core.context import Context
-from ai_helper.core.artifact.local_repository import LocalArtifactRepository
+from ai_helper.infra.storage.local_repository import LocalArtifactRepository
 from ai_helper.core.registry import register_node
 from ai_helper.pipeline.models import PipelineDefinition, NodeDefinition
 from ai_helper.core.pipeline import Pipeline
@@ -35,7 +35,7 @@ register_node("echo", EchoNode)
 def test_simple_pipeline():
     # 観点: ノード1つのパイプラインでContextとリポジトリ経由のデータ
     #       の流れが正しく行われるかを確認する。
-    from ai_helper.db.session import create_sqlite_session
+    from ai_helper.infra.db.session import create_sqlite_session
     from ai_helper.repository import ArtifactMetadataRepository
 
     session = create_sqlite_session()

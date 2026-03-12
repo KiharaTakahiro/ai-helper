@@ -1,6 +1,6 @@
 import datetime
 from sqlalchemy.orm import Session
-from ai_helper.db.models import Artifact
+from ai_helper.infra.db.models import Artifact
 
 
 class ArtifactMetadataRepository:

@@ -1,7 +1,7 @@
 """Core artifact subpackage."""
 
 from .repository import ArtifactRepository
-from .local_repository import LocalArtifactRepository
 from .types import ArtifactType
 
-__all__ = ["ArtifactRepository", "LocalArtifactRepository", "ArtifactType"]
+# 実装は infra/storage に移動したためここではインターフェースのみ提供
+__all__ = ["ArtifactRepository", "ArtifactType"]

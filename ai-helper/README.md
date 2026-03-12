@@ -29,7 +29,7 @@ ai_helper/
 ## 使用例
 ```python
 from ai_helper.core.context import Context
-from ai_helper.core.artifact.local_repository import LocalArtifactRepository
+from ai_helper.infra.storage.local_repository import LocalArtifactRepository
 from ai_helper.core.registry import register_node
 # ノードを定義・登録してパイプラインを組み立てる
 ```

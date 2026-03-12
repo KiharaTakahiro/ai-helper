@@ -1,7 +1,7 @@
 import datetime
 import uuid
 from sqlalchemy.orm import Session
-from ai_helper.db.models import PipelineRun
+from ai_helper.infra.db.models import PipelineRun
 
 
 class PipelineRunRepository:

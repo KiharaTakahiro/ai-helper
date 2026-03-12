@@ -7,8 +7,8 @@
 from fastapi.testclient import TestClient
 
 import ai_helper.db.session as dbsess
-from ai_helper.db.models import PipelineRun, NodeRun, Artifact
-from ai_helper.db.session import create_sqlite_session
+from ai_helper.infra.db.models import PipelineRun, NodeRun, Artifact
+from ai_helper.infra.db.session import create_sqlite_session
 from ai_helper.api.main import app
 
 
