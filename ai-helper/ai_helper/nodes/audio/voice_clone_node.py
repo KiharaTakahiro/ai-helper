@@ -1,10 +1,11 @@
-from ai_helper.core.node import Node
-from ai_helper.core.context import Context
-from ai_helper.core.artifact.repository import ArtifactRepository
+from ai_helper.core.node.base_node import BaseNode
 
 
-class VoiceCloneNode(Node):
-    """音声クローン処理のダミーノード。"""
+class VoiceCloneNode(BaseNode):
+    """音声クローン処理のダミーノード。
+
+    実際のクローン処理は後で実装する。
+    """
 
     name = "voice_clone"
     tags = ["audio", "clone"]
@@ -12,11 +13,6 @@ class VoiceCloneNode(Node):
     inputs = ["audio"]
     outputs = ["cloned_audio"]
 
-    def run(self, context: Context, artifact_repo: ArtifactRepository):
-        try:
-            aid = context.get_artifact("audio")
-            data = artifact_repo.load(aid)
-        except KeyError:
-            data = None
-        new_id = artifact_repo.save(data)
-        context.set_artifact("cloned_audio", new_id)
+    def execute(self, context, runtime):
+        # 実際の処理は後で実装
+        return {"cloned_audio": b"dummy_audio_data"}

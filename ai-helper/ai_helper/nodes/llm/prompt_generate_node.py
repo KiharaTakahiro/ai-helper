@@ -1,10 +1,11 @@
-from ai_helper.core.node import Node
-from ai_helper.core.context import Context
-from ai_helper.core.artifact.repository import ArtifactRepository
+from ai_helper.core.node.base_node import BaseNode
 
 
-class PromptGenerateNode(Node):
-    """プロンプト生成のダミーノード。"""
+class PromptGenerateNode(BaseNode):
+    """プロンプト生成のダミーノード。
+
+    実際のプロンプト生成処理は後で実装する。
+    """
 
     name = "prompt_generate"
     tags = ["llm", "prompt"]
@@ -12,12 +13,6 @@ class PromptGenerateNode(Node):
     inputs = ["text"]
     outputs = ["prompt"]
 
-    def run(self, context: Context, artifact_repo: ArtifactRepository):
-        try:
-            aid = context.get_artifact("text")
-            text = artifact_repo.load(aid)
-        except KeyError:
-            text = ""
-        prompt = f"prompt for {text}"
-        new_id = artifact_repo.save(prompt)
-        context.set_artifact("prompt", new_id)
+    def execute(self, context, runtime):
+        # 実際の処理は後で実装
+        return {"prompt": "dummy_text"}

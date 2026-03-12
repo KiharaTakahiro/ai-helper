@@ -1,10 +1,11 @@
-from ai_helper.core.node import Node
-from ai_helper.core.context import Context
-from ai_helper.core.artifact.repository import ArtifactRepository
+from ai_helper.core.node.base_node import BaseNode
 
 
-class StyleTransferNode(Node):
-    """スタイル変換のダミーノード。"""
+class StyleTransferNode(BaseNode):
+    """スタイル変換のダミーノード。
+
+    実際のスタイル転送処理は後で実装する。
+    """
 
     name = "style_transfer"
     tags = ["image", "style"]
@@ -12,11 +13,6 @@ class StyleTransferNode(Node):
     inputs = ["image"]
     outputs = ["styled_image"]
 
-    def run(self, context: Context, artifact_repo: ArtifactRepository):
-        try:
-            aid = context.get_artifact("image")
-            data = artifact_repo.load(aid)
-        except KeyError:
-            data = None
-        new_id = artifact_repo.save(data)
-        context.set_artifact("styled_image", new_id)
+    def execute(self, context, runtime):
+        # 実際の処理は後で実装
+        return {"styled_image": b"dummy_image_data"}

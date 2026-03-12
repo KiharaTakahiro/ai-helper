@@ -1,10 +1,11 @@
-from ai_helper.core.node import Node
-from ai_helper.core.context import Context
-from ai_helper.core.artifact.repository import ArtifactRepository
+from ai_helper.core.node.base_node import BaseNode
 
 
-class SummarizeNode(Node):
-    """テキストを要約するダミーノード。"""
+class SummarizeNode(BaseNode):
+    """テキストを要約するダミーノード。
+
+    実際の要約処理は後で実装する。
+    """
 
     name = "summarize"
     tags = ["llm", "text"]
@@ -12,12 +13,6 @@ class SummarizeNode(Node):
     inputs = ["text"]
     outputs = ["summary"]
 
-    def run(self, context: Context, artifact_repo: ArtifactRepository):
-        try:
-            aid = context.get_artifact("text")
-            text = artifact_repo.load(aid)
-        except KeyError:
-            text = ""
-        summary = f"summary of: {text}"
-        new_id = artifact_repo.save(summary)
-        context.set_artifact("summary", new_id)
+    def execute(self, context, runtime):
+        # 実際の処理は後で実装
+        return {"summary": "dummy_text"}

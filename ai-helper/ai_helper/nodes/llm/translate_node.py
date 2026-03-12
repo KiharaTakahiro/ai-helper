@@ -1,10 +1,11 @@
-from ai_helper.core.node import Node
-from ai_helper.core.context import Context
-from ai_helper.core.artifact.repository import ArtifactRepository
+from ai_helper.core.node.base_node import BaseNode
 
 
-class TranslateNode(Node):
-    """テキストを翻訳するダミーノード。"""
+class TranslateNode(BaseNode):
+    """テキストを翻訳するダミーノード。
+
+    実際の翻訳処理は後で実装する。
+    """
 
     name = "translate"
     tags = ["llm", "text"]
@@ -12,12 +13,6 @@ class TranslateNode(Node):
     inputs = ["text"]
     outputs = ["translated"]
 
-    def run(self, context: Context, artifact_repo: ArtifactRepository):
-        try:
-            aid = context.get_artifact("text")
-            text = artifact_repo.load(aid)
-        except KeyError:
-            text = ""
-        translated = f"translated:{text}"
-        new_id = artifact_repo.save(translated)
-        context.set_artifact("translated", new_id)
+    def execute(self, context, runtime):
+        # 実際の処理は後で実装
+        return {"translated": "dummy_text"}

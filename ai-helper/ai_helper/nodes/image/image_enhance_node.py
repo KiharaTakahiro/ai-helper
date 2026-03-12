@@ -1,10 +1,11 @@
-from ai_helper.core.node import Node
-from ai_helper.core.context import Context
-from ai_helper.core.artifact.repository import ArtifactRepository
+from ai_helper.core.node.base_node import BaseNode
 
 
-class ImageEnhanceNode(Node):
-    """画像を強化するダミーノード。"""
+class ImageEnhanceNode(BaseNode):
+    """画像を強化するダミーノード。
+
+    実際の強化処理は後で実装する。
+    """
 
     name = "image_enhance"
     tags = ["image", "enhance"]
@@ -12,11 +13,6 @@ class ImageEnhanceNode(Node):
     inputs = ["image"]
     outputs = ["enhanced_image"]
 
-    def run(self, context: Context, artifact_repo: ArtifactRepository):
-        try:
-            aid = context.get_artifact("image")
-            data = artifact_repo.load(aid)
-        except KeyError:
-            data = None
-        new_id = artifact_repo.save(data)
-        context.set_artifact("enhanced_image", new_id)
+    def execute(self, context, runtime):
+        # 実際の処理は後で実装
+        return {"enhanced_image": b"dummy_image_data"}
