@@ -1,10 +1,11 @@
-from ai_helper.core.node import Node
-from ai_helper.core.context import Context
-from ai_helper.core.artifact.repository import ArtifactRepository
+from ai_helper.core.node.base_node import BaseNode
 
 
-class QualityCheckNode(Node):
-    """品質チェック用のダミーノード。"""
+class QualityCheckNode(BaseNode):
+    """品質チェック用のダミーノード。
+
+    実際の品質判定処理は後で実装する。
+    """
 
     name = "quality_check"
     tags = ["analysis", "quality"]
@@ -12,11 +13,6 @@ class QualityCheckNode(Node):
     inputs = ["data"]
     outputs = ["quality_report"]
 
-    def run(self, context: Context, artifact_repo: ArtifactRepository):
-        try:
-            aid = context.get_artifact("data")
-            data = artifact_repo.load(aid)
-        except KeyError:
-            data = None
-        new_id = artifact_repo.save({"ok": True})
-        context.set_artifact("quality_report", new_id)
+    def execute(self, context, runtime):
+        # ダミー結果を返却
+        return {"quality_report": {"ok": True}}

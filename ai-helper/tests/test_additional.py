@@ -98,6 +98,18 @@ def test_node_registry_and_factory_errors():
     # 既存ノードは discovery によって登録されているはず
     assert reg.get_node_by_name("video_input") is not None
     assert any(n.name == "frame_extract" for n in reg.get_nodes_by_tag("video"))
+    # 新しく追加したノードも取得できる
+    assert reg.get_node_by_name("audio_extract") is not None
+    assert reg.get_node_by_name("style_transfer") is not None
+    assert reg.get_node_by_name("summarize") is not None
+    assert reg.get_node_by_name("video_crawler") is not None
+    assert reg.get_node_by_name("quality_check") is not None
+    # タグ検索も機能することを確認
+    assert any(n.name == "audio_extract" for n in reg.get_nodes_by_tag("audio"))
+    assert any(n.name == "style_transfer" for n in reg.get_nodes_by_tag("image"))
+    assert any(n.name == "summarize" for n in reg.get_nodes_by_tag("llm"))
+    assert any(n.name == "video_crawler" for n in reg.get_nodes_by_tag("crawler"))
+    assert any(n.name == "quality_check" for n in reg.get_nodes_by_tag("analysis"))
     # 手動登録と削除が機能すること
     class Temp(Node):
         name = "tempnode"

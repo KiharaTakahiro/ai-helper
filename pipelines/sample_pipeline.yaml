@@ -1,0 +1,5 @@
+id: sample_pipeline
+nodes:
+  - FrameExtractNode
+  - FaceSwapNode
+  - EncodeVideoNode

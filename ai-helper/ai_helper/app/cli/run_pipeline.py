@@ -51,6 +51,30 @@ def load_pipeline(path: str) -> Pipeline:
             raise ValueError("YAML support requires PyYAML; please install it")
         with open(path, 'r', encoding='utf-8') as f:
             data = yaml.safe_load(f)
+        # simple preprocessing: allow nodes as list of strings (class names)
+        if isinstance(data, dict) and "nodes" in data:
+            raw_nodes = data["nodes"]
+            from ai_helper.pipeline.models import NodeDefinition
+
+            def _snake(name: str) -> str:
+                # remove trailing "Node" if present
+                if name.endswith("Node"):
+                    name = name[: -len("Node")]
+                import re
+
+                s1 = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
+                return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
+
+            processed = []
+            if isinstance(raw_nodes, list):
+                for idx, item in enumerate(raw_nodes):
+                    if isinstance(item, str):
+                        processed.append(NodeDefinition(type=_snake(item), order=idx))
+                    elif isinstance(item, dict):
+                        processed.append(NodeDefinition(**item))
+                    else:
+                        raise ValueError(f"unsupported node entry in yaml: {item}")
+                data["nodes"] = processed
         # assume dict convertible to PipelineDefinition
         pd = PipelineDefinition(**data)
         return Pipeline.from_definition(pd)
