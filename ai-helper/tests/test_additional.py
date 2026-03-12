@@ -92,6 +92,25 @@ def test_node_registry_and_factory_errors():
     keyed = factory.create("cfg", {"foo": 5, "bar": 7})
     assert keyed.foo == 5 and keyed.bar == 7
 
+    # NodeRegistry クラスを直接使って名前/タグ検索を試す
+    from ai_helper.core.registry.node_registry import NodeRegistry
+    reg = NodeRegistry()
+    # 既存ノードは discovery によって登録されているはず
+    assert reg.get_node_by_name("video_input") is not None
+    assert any(n.name == "frame_extract" for n in reg.get_nodes_by_tag("video"))
+    # 手動登録と削除が機能すること
+    class Temp(Node):
+        name = "tempnode"
+        tags = ["testtag"]
+        def run(self, ctx, repo):
+            pass
+    reg.register_node(Temp)
+    assert reg.get_node_by_name("tempnode") is Temp
+    assert Temp in reg.get_nodes_by_tag("testtag")
+    reg.unregister_node("tempnode")
+    with pytest.raises(KeyError):
+        _ = reg.get_node_by_name("tempnode")
+
 
 # 設定関連
 

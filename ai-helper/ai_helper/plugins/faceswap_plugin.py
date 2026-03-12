@@ -9,6 +9,9 @@ from ai_helper.runtimes.faceswap import FaceSwapRuntime
 class FaceSwapNode(Node):
     """フレームリストを受け取り顔差し替え済みフレームを出力するノード。"""
 
+    name = "faceswap"
+    tags = ["video", "faceswap"]
+
     inputs = ["frames"]
     outputs = ["swapped"]
 

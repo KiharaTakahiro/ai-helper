@@ -8,13 +8,24 @@ from ai_helper.core.artifact.repository import ArtifactRepository
 class FrameExtractNode(Node):
     """動画ファイルからフレームを抽出してアーティファクト化するサンプルノード。
 
-    実際には動画解析を行わず、渡されたパス文字列に
-    "_frame_1" と "_frame_2" を付加した擬似フレームリストを返す。
-    
+    このノードは動画ファイル ("video" アーティファクト) を入力として受け取り、
+    フレームリスト ("frames" アーティファクト) を出力する。
+
     Attributes:
-        inputs (list[str]): 必要とするアーティファクト名のリスト（"video"）。
-        outputs (list[str]): 出力するアーティファクト名のリスト（"frames"）。
+        name (str): ノード登録名。
+        tags (list[str]): ノードに関連付けるタグ。
     """
+
+    name = "frame_extract"
+    tags = ["video", "extract"]
+
+    # 実装注釈:
+    # 実際には動画解析を行わず、渡されたパス文字列に
+    # "_frame_1" と "_frame_2" を付加した擬似フレームリストを返す。
+    #
+    # 以下は前のドキュメントで記載していた属性説明を継続。
+    inputs = ["video"]
+    outputs = ["frames"]
 
     inputs = ["video"]
     outputs = ["frames"]

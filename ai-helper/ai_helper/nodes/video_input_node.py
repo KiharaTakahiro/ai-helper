@@ -7,9 +7,14 @@ class VideoInputNode(Node):
     """動画ファイルパスを取り込み、アーティファクト化するサンプルノード。
 
     Attributes:
+        name (str): ノード登録名。
+        tags (list[str]): ノードに関連付けるタグ一覧。
         outputs (list[str]): "video" を出力として持つ。
         video_path (str): コンストラクタで渡される入力パス。
     """
+
+    name = "video_input"
+    tags = ["video", "input"]
 
     outputs = ["video"]
 

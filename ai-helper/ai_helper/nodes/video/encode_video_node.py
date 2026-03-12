@@ -7,15 +7,21 @@ from ai_helper.core.registry import register_node
 class EncodeVideoNode(Node):
     """動画またはフレームリストを受け取りエンコード済みデータを出力するノード。
 
-    本実装では実際のエンコード処理は行わず、
-    入力オブジェクトに "encoded_" という接頭辞を付加した文字列を保存するだけの
-    ダミー実装となっている。
-
     Attributes:
-        inputs (list[str]): 必要とする入力アーティファクト名（"swapped"）。
-        outputs (list[str]): 出力するアーティファクト名（"encoded"）。
-        config (dict): コンストラクタ引数として渡される設定オブジェクト。
+        name (str): ノード登録名。
+        tags (list[str]): ノードに関連付けるタグ。
     """
+
+    name = "encode_video"
+    tags = ["video", "encode"]
+
+    # 実装注釈:
+    # 本実装では実際のエンコード処理は行わず、
+    # 入力オブジェクトに "encoded_" という接頭辞を付加した文字列を保存する
+    # だけのダミー実装となっている。
+    # 以下は前のドキュメントで記載していた属性説明を継続。
+    inputs = ["swapped"]
+    outputs = ["encoded"]
 
     inputs = ["swapped"]
     outputs = ["encoded"]
