@@ -4,7 +4,11 @@ from ai_helper.core.artifact.repository import ArtifactRepository
 
 
 class ResizeVideoNode(Node):
-    """動画やフレームをリサイズするダミーノード。"""
+    """動画やフレームをリサイズするダミーノード。
+
+    実際のリサイズ処理は後で実装する。
+    現在は入力をそのまま返すダミー実装である。
+    """
 
     name = "resize_video"
     tags = ["video", "transform"]

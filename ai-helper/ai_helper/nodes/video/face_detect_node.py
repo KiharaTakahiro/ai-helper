@@ -4,7 +4,10 @@ from ai_helper.core.artifact.repository import ArtifactRepository
 
 
 class FaceDetectNode(Node):
-    """フレームリストから顔検出情報を生成するダミーノード。"""
+    """フレームリストから顔検出情報を生成するダミーノード。
+
+    実際の顔検出処理は後で実装する。
+    """
 
     name = "face_detect"
     tags = ["video", "detect"]
