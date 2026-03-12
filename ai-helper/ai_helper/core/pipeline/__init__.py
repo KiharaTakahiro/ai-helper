@@ -1,3 +1,5 @@
+"""Core pipeline package containing Pipeline implementation."""
+
 import datetime
 import hashlib
 import json
@@ -8,8 +10,9 @@ import tracemalloc
 from typing import Dict, List
 
 from ai_helper.core.context import Context
-from ai_helper.artifact.repository import ArtifactRepository
+from ai_helper.core.artifact.repository import ArtifactRepository
 from ai_helper.core.node import Node
+
 
 # GPU availability helper (same logic as in node_executor for consistency)
 def _gpu_available():
@@ -73,7 +76,7 @@ class Pipeline:
 
         トポロジカルソートと簡単な検証を行う。
         """
-        from ai_helper.node.factory import NodeFactory
+        from ai_helper.core.registry.factory import NodeFactory
 
         node_factory = node_factory or NodeFactory()
         # build graph
@@ -234,7 +237,7 @@ class Pipeline:
         lock = threading.Lock()
 
         # use NodeExecutor for actual execution logic
-        from ai_helper.core.node_executor import NodeExecutor
+        from ai_helper.core.executor import NodeExecutor
         node_executor = NodeExecutor(artifact_repo, db_session=db_session)
 
         def _execute(node: Node):
@@ -298,43 +301,3 @@ class Pipeline:
         finally:
             executor.shutdown(wait=False)
         # success
-        if pr_repo is not None:
-            pr_repo.update_status(pr.id, "SUCCESS", finished_at=datetime.datetime.now(datetime.UTC))
-
-    # debug helpers ---------------------------------------------------
-
-    def run_node(self, node_id: str, context: Context, artifact_repo: ArtifactRepository, db_session=None):
-        """単一ノードをデバッグ実行する。"""
-        # find node instance by id
-        if not hasattr(self, "_node_map"):
-            raise ValueError("pipeline has no node map")
-        node = self._node_map.get(node_id)
-        if node is None:
-            raise KeyError(f"node '{node_id}' not found")
-        from ai_helper.core.node_executor import NodeExecutor
-
-        executor = NodeExecutor(artifact_repo, db_session=db_session)
-        return executor.execute(node, context)
-
-    def run_until(self, node_id: str, context: Context, artifact_repo: ArtifactRepository, db_session=None):
-        """依存順で指定ノードまで順次実行する。"""
-        if not hasattr(self, "_node_map"):
-            raise ValueError("pipeline has no node map")
-        from ai_helper.core.node_executor import NodeExecutor
-
-        executor = NodeExecutor(artifact_repo, db_session=db_session)
-        for node in self.nodes:
-            nid = getattr(node, "definition", None).node_id if hasattr(node, "definition") else None
-            executor.execute(node, context)
-            if nid == node_id:
-                break
-
-    def step_runner(self, context: Context, artifact_repo: ArtifactRepository, db_session=None):
-        """ジェネレータで1ノードずつ順番に実行するデバッグ用ステップ実行。"""
-        from ai_helper.core.node_executor import NodeExecutor
-
-        executor = NodeExecutor(artifact_repo, db_session=db_session)
-        for node in self.nodes:
-            nid = getattr(node, "definition", None).node_id if hasattr(node, "definition") else None
-            outputs = executor.execute(node, context)
-            yield nid, outputs

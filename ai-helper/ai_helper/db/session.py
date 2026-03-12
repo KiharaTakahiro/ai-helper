@@ -36,5 +36,8 @@ def create_sqlite_session(db_url: str = "sqlite:///:memory:"):
 
 
 def get_session():
-    """Convenience accessor for a default (in-memory SQLite) session."""
+    """デフォルトのメモリ内 SQLite セッションを簡単に取得するためのアクセサ。
+
+    内部では create_sqlite_session() を呼び出すだけで、特に引数は不要である。
+    """
     return create_sqlite_session()

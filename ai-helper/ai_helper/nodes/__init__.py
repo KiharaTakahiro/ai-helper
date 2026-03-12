@@ -1,6 +1,7 @@
 # nodes package for user-defined pipeline nodes
 
-from .video_input_node import VideoInputNode
-from .frame_extract_node import FrameExtractNode
+# backward-compatible convenience imports
+from .video.video_input_node import VideoInputNode
+from .video.frame_extract_node import FrameExtractNode
 
 __all__ = ["VideoInputNode", "FrameExtractNode"]

@@ -7,11 +7,11 @@
 # コア機能が正常に動作することを確認し、結果的に関連コード行を網羅する。
 
 from ai_helper.core.context import Context
-from ai_helper.artifact.local_repository import LocalArtifactRepository
-from ai_helper.node.registry import register_node
+from ai_helper.core.artifact.local_repository import LocalArtifactRepository
+from ai_helper.core.registry import register_node
 from ai_helper.pipeline.models import PipelineDefinition, NodeDefinition
 from ai_helper.core.pipeline import Pipeline
-from ai_helper.node.factory import NodeFactory
+from ai_helper.core.registry import NodeFactory
 from ai_helper.core.node import Node
 
 

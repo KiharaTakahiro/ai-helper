@@ -2,11 +2,11 @@ from .core.context import Context
 from .core.node import Node
 from .core.pipeline import Pipeline
 
-from .artifact.repository import ArtifactRepository
-from .artifact.local_repository import LocalArtifactRepository
+from .core.artifact.repository import ArtifactRepository
+from .core.artifact.local_repository import LocalArtifactRepository
 
-from .node.registry import register_node, get_node_class
-from .node.factory import NodeFactory
+from .core.registry import register_node, get_node_class
+from .core.registry import NodeFactory
 
 from .pipeline.models import NodeDefinition, PipelineDefinition
 from .pipeline.repository import PipelineRepository

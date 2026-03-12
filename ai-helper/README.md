@@ -8,21 +8,29 @@
 ## ディレクトリ構成
 ```
 ai_helper/
-    core/          # 基本クラス
-    artifact/      # アーティファクトリポジトリ
-    node/          # ノード登録・生成
-    pipeline/      # パイプライン関連モデル
-    db/            # (将来用) DB 層
-    nodes/         # サンプルノード
-    api/           # FastAPI アプリ
+    core/          # パイプラインエンジン（execution, node interface, context, registryなど）
+        artifact/  # アーティファクト管理
+        context/
+        executor/
+        node/
+        pipeline/
+        registry/
+    nodes/         # ノード実装（video/, audio/, llm/ 等）
+    runtimes/      # AIモデルや外部ツールへの接続層
+    pipelines/     # パイプライン定義
+    app/           # CLI / Web UI
+        cli/
+        web/
+    utils/         # 汎用ユーティリティ
+    db/            # データベース関連
     config/        # 設定
 ```
 
 ## 使用例
 ```python
 from ai_helper.core.context import Context
-from ai_helper.artifact.local_repository import LocalArtifactRepository
-from ai_helper.node.registry import register_node
+from ai_helper.core.artifact.local_repository import LocalArtifactRepository
+from ai_helper.core.registry import register_node
 # ノードを定義・登録してパイプラインを組み立てる
 ```
 

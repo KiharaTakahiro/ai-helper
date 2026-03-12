@@ -1,3 +1,5 @@
+"""Core context subpackage."""
+
 from typing import Dict
 
 

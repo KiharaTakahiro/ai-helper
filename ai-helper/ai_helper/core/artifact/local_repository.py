@@ -4,7 +4,7 @@ import pickle
 import time
 import datetime
 
-from ai_helper.artifact.repository import ArtifactRepository
+from ai_helper.core.artifact.repository import ArtifactRepository
 
 
 class LocalArtifactRepository(ArtifactRepository):

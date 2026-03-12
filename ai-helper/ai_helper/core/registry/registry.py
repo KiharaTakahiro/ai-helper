@@ -2,6 +2,7 @@ NODE_REGISTRY = {}
 
 
 # plugin loading is done at import time to register nodes automatically
+
 def _load_plugins():
     try:
         import pkgutil
@@ -16,6 +17,7 @@ def _load_plugins():
         except Exception:
             # plugin errors should not prevent engine startup
             pass
+
 
 # call loader once
 _load_plugins()

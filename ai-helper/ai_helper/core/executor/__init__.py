@@ -1,3 +1,5 @@
+"""Core executor package containing NodeExecutor."""
+
 from typing import Dict, List
 import datetime
 import time
@@ -5,7 +7,7 @@ import tracemalloc
 
 from ai_helper.core.context import Context
 from ai_helper.core.node import Node
-from ai_helper.artifact.repository import ArtifactRepository
+from ai_helper.core.artifact.repository import ArtifactRepository
 
 
 class NodeExecutor:
@@ -53,7 +55,7 @@ class NodeExecutor:
         # instantiate if we got a definition
         if not isinstance(node_or_def, Node):
             # avoid circular import by importing inside
-            from ai_helper.node.factory import NodeFactory
+            from ai_helper.core.registry.factory import NodeFactory
 
             factory = NodeFactory()
             node = factory.create(node_or_def.node_type, node_or_def.config)

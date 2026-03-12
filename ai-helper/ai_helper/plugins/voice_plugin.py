@@ -1,4 +1,4 @@
-from ai_helper.node.registry import register_node
+from ai_helper.core.registry import register_node
 from ai_helper.core.node import Node
 from ai_helper.core.context import Context
 

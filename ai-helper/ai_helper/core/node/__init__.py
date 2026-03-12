@@ -1,6 +1,8 @@
+"""Core node subpackage containing base Node class."""
+
 from abc import ABC, abstractmethod
 from ai_helper.core.context import Context
-from ai_helper.artifact.repository import ArtifactRepository
+from ai_helper.core.artifact.repository import ArtifactRepository
 
 
 class Node(ABC):

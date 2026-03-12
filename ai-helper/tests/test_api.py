@@ -15,9 +15,9 @@ from ai_helper.api.main import app
 def test_api_endpoint_records(tmp_path):
     # 観点: エンドポイント呼び出し時にパイプラインが実行されること。
     #       セッションをパッチしてDBへのレコード化を観察する。
-    # prepare a shared in-memory DB session and patch get_session
+    # 共通のインメモリDBセッションを用意し、get_session をパッチする
     session = create_sqlite_session()
-    # patch both the db session module and the api.main reference just in case
+    # 念のため db session モジュールと api.main の参照先双方をパッチ
     dbsess.get_session = lambda: session
     import ai_helper.api.main as api_main
     api_main.dbsess.get_session = lambda: session
@@ -25,9 +25,9 @@ def test_api_endpoint_records(tmp_path):
     client = TestClient(app)
     response = client.post("/pipeline/run/demo")
     assert response.status_code == 200
-    # check that pipeline_run and node_run and artifact entries exist
+    # pipeline_run, node_run, artifact のレコードが作成されていることを確認
     assert session.query(PipelineRun).count() == 1
-    assert session.query(NodeRun).count() == 2  # demo pipeline has two nodes
+    assert session.query(NodeRun).count() == 2  # demo パイプラインは2つのノードを持つ
     assert session.query(Artifact).count() >= 1
-    # verify response contains artifacts keys
+    # レスポンスに artifacts キーが含まれることを検証
     assert "artifacts" in response.json()

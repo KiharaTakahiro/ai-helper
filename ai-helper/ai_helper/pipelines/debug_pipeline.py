@@ -1,12 +1,12 @@
 from ai_helper.db.session import create_sqlite_session
 from ai_helper.core.pipeline import Pipeline
-from ai_helper.artifact.local_repository import LocalArtifactRepository
+from ai_helper.core.artifact.local_repository import LocalArtifactRepository
 from ai_helper.pipeline.repository import PipelineRepository
-from ai_helper.node.factory import NodeFactory
+from ai_helper.core.registry import NodeFactory
 from ai_helper.core.context import Context
-from ai_helper.node.registry import register_node
-from ai_helper.nodes.video_input_node import VideoInputNode
-from ai_helper.nodes.frame_extract_node import FrameExtractNode
+from ai_helper.core.registry import register_node
+from ai_helper.nodes.video.video_input_node import VideoInputNode
+from ai_helper.nodes.video.frame_extract_node import FrameExtractNode
 
 # register nodes as API does
 def register_demo_nodes():

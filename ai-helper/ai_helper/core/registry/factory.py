@@ -1,4 +1,4 @@
-from ai_helper.node.registry import get_node_class
+from ai_helper.core.registry.registry import get_node_class
 
 
 class NodeFactory:
