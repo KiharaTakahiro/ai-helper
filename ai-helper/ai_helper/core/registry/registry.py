@@ -19,6 +19,45 @@ def _load_plugins():
             pass
 
 
+def _scan_node_packages():
+    """`ai_helper.nodes` 配下を走査し、Node サブクラスを自動登録する。
+
+    各モジュールをインポートし、その中の ``Node`` 派生クラスを探す。
+    クラス名をスネークケースに変換して登録名とする。
+    """
+    try:
+        import pkgutil
+        import importlib
+        import inspect
+        from ai_helper.core.node import Node
+        import ai_helper.nodes as nodes_pkg
+    except ImportError:
+        return
+
+    def _snake_case(name: str) -> str:
+        import re
+        s1 = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
+        return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
+
+    for finder, modname, ispkg in pkgutil.walk_packages(nodes_pkg.__path__, nodes_pkg.__name__ + "."):
+        try:
+            module = importlib.import_module(modname)
+        except Exception:
+            continue
+        for attr in dir(module):
+            obj = getattr(module, attr)
+            if inspect.isclass(obj) and issubclass(obj, Node) and obj is not Node:
+                name = _snake_case(attr)
+                # avoid overwriting an existing registration
+                if name not in NODE_REGISTRY:
+                    NODE_REGISTRY[name] = obj
+
+# call loader once
+_load_plugins()
+# after plugins, scan the built-in nodes directory
+_scan_node_packages()
+
+
 # call loader once
 _load_plugins()
 
