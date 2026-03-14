@@ -1,4 +1,27 @@
-"""Core pipeline package containing Pipeline implementation."""
+"""
+Pipeline execution engine.
+
+Pipeline は Node の DAG (Directed Acyclic Graph) を表す。
+
+構造
+
+Pipeline
+   ↓
+Node
+   ↓
+Artifact
+
+Node は Artifact を入力として受け取り
+新しい Artifact を生成する。
+
+Pipeline は
+
+1 依存関係解決
+2 実行順序決定
+3 Node実行
+
+を管理する。
+"""
 
 import datetime
 import hashlib

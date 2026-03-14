@@ -30,7 +30,28 @@ from ai_helper.core.context import Context
 from ai_helper.infra.storage.local_repository import LocalArtifactRepository
 from ai_helper.pipeline.models import PipelineDefinition
 
-
+# -------------------------------------------------------------
+# Pipeline Loader
+#
+# CLIから指定されたパイプライン定義を読み込み Pipeline を生成する。
+#
+# ai-helper では Pipeline 定義方法を複数サポートしている。
+#
+# 1 Python module
+#   - pipeline 変数
+#   - definition (PipelineDefinition)
+#   - create_pipeline()
+#
+# 2 YAML
+#   - declarative pipeline definition
+#
+# この柔軟性により
+#
+# ・簡単なpipeline → YAML
+# ・複雑なpipeline → Python
+#
+# の使い分けが可能になる。
+# -------------------------------------------------------------
 def load_pipeline(path: str) -> Pipeline:
     """指定パスからパイプラインを読み込み ``Pipeline`` を生成する。
 
@@ -95,6 +116,14 @@ def load_pipeline(path: str) -> Pipeline:
             raw_nodes = data["nodes"]
             from ai_helper.pipeline.models import NodeDefinition
 
+            # Node class 名から registry lookup 用の type 名を生成する
+            #
+            # Example
+            #   VideoInputNode -> video_input
+            #   FrameExtractNode -> frame_extract
+            #
+            # NodeRegistry は snake_case の type 名でノードを検索するため
+            # YAML定義では class名ベースでも書けるようにしている
             def _snake(name: str) -> str:
                 # remove trailing "Node" if present
                 if name.endswith("Node"):
@@ -148,6 +177,16 @@ def main():
     ctx = Context()
 
     print("starting run...")
+    # Pipeline 実行
+    #
+    # Pipeline.run は以下の処理を内部で行う
+    #
+    # 1 Node依存関係(DAG)解決
+    # 2 実行順序決定
+    # 3 Node実行
+    # 4 Artifact保存
+    #
+    # CLIは実行結果の表示のみ担当する
     pipeline.run(ctx, repo)
     print("Pipeline finished")
 
