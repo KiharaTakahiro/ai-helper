@@ -1,172 +1,389 @@
-# ai-helper 設計ドキュメント
+# ai-helper Architecture
 
-このドキュメントは ai-helper のコア設計情報をまとめたものです。  
-GitHub 上で Mermaid がそのままレンダリングされる形式になっています。
+ai-helper は AI処理パイプラインを構築・実行するためのフレームワークである。
 
----
+主な目的は以下の通り。
 
-## 1. プロジェクト概要
+- AI処理をパイプラインとして構造化する
+- Node単位で処理を分離する
+- Artifactを用いてNode間データを管理する
+- 実行エンジンを抽象化する
 
-**ai-helper** は、複数の AI 処理をパイプラインとして組み合わせ、  
-自動化・再現可能な AI ワークフローを実現する軽量エンジンです。
-
-用途例：
-
-- 動画生成パイプライン
-- face swap / voice swap
-- テキスト生成・データ処理自動化
-- 外部サービスやモデルの連携
+このドキュメントでは ai-helper のアーキテクチャと設計思想を説明する。
 
 ---
 
-## 2. 基本概念
+# 1. 基本アーキテクチャ
 
-| 用語 | 説明 |
-|------|------|
-| Pipeline | Node を順番に実行する処理の単位 |
-| Node | Pipeline 内の処理単位（入力→処理→出力） |
-| Context | Node 間で共有される実行状態 |
-| Artifact | Node の出力データの参照（ID 形式） |
-| ArtifactRepository | Artifact の保存・取得を抽象化する層 |
+ai-helper は以下のレイヤー構造で構成される。
 
----
+```
+CLI / API
+   ↓
+Executor
+   ↓
+Core
+   ↓
+Storage
+```
 
-## 3. Pipeline 実行フロー
+各レイヤーの責務は以下の通り。
 
-\```mermaid
-flowchart TD
-    A[PipelineDefinition] -->|取得| B[NodeFactory]
-    B -->|Node 生成| C[Pipeline]
-    C --> D[Context 作成]
-    D --> E[Pipeline.run()]
-    E --> F{Node1, Node2, ...}
-    F --> G[Node1 実行]
-    F --> H[Node2 実行]
-    F --> I[NodeN 実行]
-    G --> J[Artifact 保存]
-    H --> J
-    I --> J
-\```
+## CLI / API
 
----
+パイプライン実行のエントリーポイントを提供する。
 
-## 4. Node 実行イメージ
+主な役割
 
-\```mermaid
-flowchart TD
-    VI[VideoInputNode]
-    FE[FrameExtractNode]
-    FS[FaceSwapNode]
-    RN[RenderNode]
+- Pipeline定義読み込み
+- Pipeline生成
+- Executor呼び出し
 
-    VI --> FE --> FS --> RN
-\```
+## Executor
 
-### Node 内部の処理フロー
+PipelineおよびNodeの実行を管理する。
 
-\```mermaid
-flowchart LR
-    A[inputs] --> B[run() 処理] --> C[outputs]
-    B --> D[ArtifactRepository.save()]
-    C --> E[Context に出力ID登録]
-\```
+主な役割
 
----
+- Node実行
+- 実行順序管理
+- 実行状態管理
 
-## 5. Context と Artifact の関係
+## Core
 
-\```mermaid
-flowchart TD
-    subgraph Pipeline Context
-        CTX[Context]
-    end
-    CTX -->|artifact_id| AR[ArtifactRepository]
-    AR -->|保存/取得| ST[(Storage: local/S3/MinIO/DB)]
-\```
+フレームワークのコア概念を定義する。
+
+主な要素
+
+- Pipeline
+- Node
+- Artifact
+- Context
+- Registry
+
+## Storage
+
+Artifactの保存を担当する。
+
+ストレージ実装は抽象化されており、
+ローカルストレージ・クラウドストレージなどに置き換え可能。
 
 ---
 
-## 6. Node 定義ルール
+# 2. Pipelineモデル
 
-- Node は必ず以下を定義する：
-  - `inputs`：必要な Artifact 名
-  - `outputs`：出力する Artifact 名
-- `run()` 内で ArtifactRepository を使って入出力を取得/保存
-- Node は副作用を避け、外部状態は ArtifactRepository 経由で管理
-- Node は順序や依存関係を PipelineDefinition で明示
+ai-helperではAI処理を **Pipeline** として表現する。
 
-### Node 定義例（Python）
+PipelineはNodeの集合であり、
+Node間の依存関係はDAG（Directed Acyclic Graph）として管理される。
 
-\```python
-class FrameExtractNode(Node):
-    inputs = ["video"]
-    outputs = ["frames"]
+```
+Pipeline
+  ↓
+Node
+  ↓
+Artifact
+```
 
-    def run(self, context: Context):
-        video = self.get_input("video")
-        frames = extract_frames(video)
-        self.save_output("frames", frames)
-\```
+Pipelineは以下を管理する。
 
----
+- Nodeの集合
+- Node依存関係
+- 実行順序
 
-## 7. Artifact 定義と保存戦略
+Pipeline自体は **処理ロジックを持たず**、
+構造のみを定義する。
 
-- Artifact は「データ参照」＋「メタデータ」を保持
-- 実データは Storage 層に保存
-- ArtifactRepository は保存・取得・更新を抽象化
-- 将来的にローカル / S3 / MinIO / DB / Redis を切り替え可能
-
-\```mermaid
-flowchart TD
-    Context -->|artifact_id| Repo[ArtifactRepository]
-    Repo -->|保存/取得| Storage[(Local/S3/MinIO/DB)]
-\```
+実際の実行はExecutorが担当する。
 
 ---
 
-## 8. PipelineDefinition
+# 3. Nodeモデル
 
-- PipelineDefinition は以下の情報を保持
+Nodeはパイプライン内の処理単位である。
 
-| 属性 | 説明 |
-|------|------|
-| id | Pipeline 識別子 |
-| nodes[] | NodeDefinition の配列（順序情報含む） |
+Nodeは以下の責務を持つ。
 
-NodeDefinition 例：
+- Artifactを入力として受け取る
+- 処理を実行する
+- 新しいArtifactを生成する
 
-\```json
+処理モデル
+
+```
+Input Artifact
+      ↓
+     Node
+      ↓
+Output Artifact
+```
+
+すべてのNodeは `run()` メソッドを実装する必要がある。
+
+例
+
+```python
+class ExampleNode(Node):
+
+    def run(self, ctx, repo):
+        # Node処理
+        pass
+```
+
+---
+
+# 4. Artifactモデル
+
+ArtifactはNodeの実行結果を表すデータオブジェクトである。
+
+主な役割
+
+- Node間データ共有
+- 処理結果保存
+- パイプライン状態管理
+
+Artifactの実体は **Repositoryに保存される。**
+
+ContextはArtifactの **IDのみ** を保持する。
+
+```
+Node
+ ↓
+Artifact
+ ↓
+Repository
+```
+
+この設計により
+
+- 大容量データ対応
+- 再実行
+- キャッシュ
+
+などが容易になる。
+
+---
+
+# 5. Context
+
+Contextはパイプライン実行中の状態を保持するオブジェクトである。
+
+主な役割
+
+- Artifact ID管理
+- Node間データ共有
+- 実行状態管理
+
+例
+
+```
+Context.artifacts
+
 {
-  "type": "frame_extract",
-  "config": {"param1": "value1"},
-  "order": 2
+  "input_video": artifact_id
 }
-\```
+```
 
-- PipelineDefinition はファイルや DB からロード可能
-- Node の依存関係は `inputs`/`outputs` で自動解決
-
----
-
-## 9. 拡張方針 / 将来計画
-
-- Node plugin system の構築
-- パイプライングラフ UI（Web 表示）
-- 分散実行対応
-- GPU Node / 外部サービス連携ノード
-- Artifact バックエンドの多様化
+Contextは **実データを持たず**
+Artifactの参照のみを管理する。
 
 ---
 
-## 10. Mermaid の利用について
+# 6. Executor
 
-- このドキュメントは GitHub 上でそのまま Mermaid をレンダリング可能  
-- Pipeline / Node / Artifact 関係を視覚化することで理解しやすい設計書として利用
+ExecutorはPipelineの実行エンジンである。
+
+責務
+
+- Node実行
+- 依存関係解決
+- 実行順序管理
+
+実行フロー
+
+```
+PipelineExecutor
+
+↓ DAG解析
+
+↓ Node順序決定
+
+↓ Node実行
+
+↓ Artifact生成
+```
+
+PipelineとExecutorを分離することで
+
+- Pipeline定義
+- 実行ロジック
+
+を独立させている。
 
 ---
 
-## 参考資料
+# 7. NodeRegistry
 
-- 設計原案: design.md
-- コードベース: ai_helper/core/ / ai_helper/nodes/ / ai_helper/runtimes/
+NodeRegistryはNode typeからNodeクラスを解決する仕組みである。
+
+例
+
+```
+type: video_input
+```
+
+↓
+
+```
+VideoInputNode
+```
+
+この仕組みにより以下を実現する。
+
+- YAMLパイプライン
+- Plugin Node
+- 動的Nodeロード
+
+---
+
+# 8. Pipeline定義
+
+ai-helperではPipelineを以下の方法で定義できる。
+
+## Python定義
+
+```python
+pipeline = Pipeline(...)
+```
+
+## YAML定義
+
+```yaml
+nodes:
+  - video_input
+  - frame_extract
+```
+
+YAMLは簡易パイプライン、
+Pythonは複雑なパイプライン定義に適している。
+
+---
+
+# 9. ディレクトリ構造
+
+```
+ai_helper/
+
+app/
+  cli/
+
+core/
+  pipeline/
+  node/
+  artifact/
+  context/
+  registry/
+
+infra/
+  storage/
+```
+
+各ディレクトリの責務
+
+## app
+
+アプリケーションエントリーポイント
+
+例
+
+- CLI
+- API
+
+## core
+
+フレームワークコア
+
+例
+
+- Pipeline
+- Node
+- Artifact
+- Context
+
+## infra
+
+インフラ実装
+
+例
+
+- Storage
+- Database
+
+---
+
+# 10. 実行フロー
+
+パイプライン実行の基本フロー
+
+```
+CLI
+
+↓ Pipeline定義読み込み
+
+↓ Pipeline生成
+
+↓ Executor
+
+↓ Node実行
+
+↓ Artifact生成
+```
+
+---
+
+# 11. 用語
+
+|用語|説明|
+|---|---|
+|Node|処理単位|
+|Artifact|Node実行結果|
+|Pipeline|Node集合|
+|Executor|実行エンジン|
+|Registry|Node解決機構|
+
+---
+
+# 12. 設計思想
+
+ai-helperの設計は以下の原則に基づく。
+
+## 処理はNode単位で分離する
+
+パイプラインは小さな処理単位に分割する。
+
+## Node間データはArtifactで管理する
+
+Node間のデータ依存関係を明確にする。
+
+## PipelineとExecutorを分離する
+
+Pipelineは構造、
+Executorは実行を担当する。
+
+## Storage実装を抽象化する
+
+ストレージを差し替え可能にする。
+
+---
+
+# 13. 拡張性
+
+ai-helperは以下の拡張を想定している。
+
+- Plugin Node
+- 分散実行
+- キャッシュ
+- GPU処理
+- 外部ストレージ
+
+これらはExecutorおよびRegistryを拡張することで実現可能である。
