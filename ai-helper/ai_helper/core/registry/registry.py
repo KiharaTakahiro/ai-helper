@@ -1,4 +1,4 @@
-﻿"""旧来のノードレジストリ API を保持しつつ
+"""旧来のノードレジストリ API を保持しつつ
 内部で ``NodeRegistry`` クラスを利用するラッパーモジュール。"""
 
 from ai_helper.core.registry.node_registry import NodeRegistry

@@ -514,7 +514,7 @@ def test_get_session_helper():
     sess = create_sqlite_session()
     assert sess is not None
     # get_session は同じ関数を呼ぶだけである
-    from ai_helper.db.session import get_session
+    from ai_helper.infra.db.session import get_session
 
     sess2 = get_session()
     assert sess2 is not None

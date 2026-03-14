@@ -2,7 +2,7 @@ from .core.context import Context
 from .core.node import Node
 from .core.pipeline import Pipeline
 
-from .core.artifact.repository import ArtifactRepository
+from .core.repository.artifact_repository import ArtifactRepository
 from .infra.storage.local_repository import LocalArtifactRepository
 
 from .core.registry import register_node, get_node_class
