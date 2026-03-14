@@ -1,6 +1,5 @@
 """Core artifact subpackage."""
 
-from .repository import ArtifactRepository
 from .types import ArtifactType
 
 # 実装は infra/storage に移動したためここではインターフェースのみ提供
