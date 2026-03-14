@@ -6,9 +6,12 @@ from typing import Any, Dict
 @dataclass
 class Artifact:
     """
-    Artifact data model.
+    アーティファクトのデータモデル。
 
-    Represents the output of a Node execution.
+    Node 実行によって生成される成果物を表す。
+
+    パイプラインでは Node が Artifact を生成し、
+    次の Node がそれを入力として利用する。
     """
 
     id: str

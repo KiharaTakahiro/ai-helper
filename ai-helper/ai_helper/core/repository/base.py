@@ -4,9 +4,15 @@ from typing import Any, List
 
 class Repository(ABC):
     """
-    Base repository interface.
+    Repository の基底インターフェース。
 
-    Provides basic CRUD-like operations.
+    データ保存層の抽象化を目的とする。
+
+    主な操作
+    - save
+    - load
+    - delete
+    - list
     """
 
     @abstractmethod

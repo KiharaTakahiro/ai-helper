@@ -4,12 +4,17 @@ from .base import Storage
 
 class MemoryStorage(Storage):
     """
-    In-memory storage backend.
-    Useful for testing or temporary pipelines.
+    メモリ上にデータを保存するストレージ実装。
+
+    主に以下用途で使用する
+
+    - テスト
+    - 一時的なパイプライン実行
+    - 開発時の簡易ストレージ
     """
 
     def __init__(self):
-        self._store = {}
+        self._store: dict[str, Any] = {}
 
     def save(self, key: str, data: Any) -> str:
 

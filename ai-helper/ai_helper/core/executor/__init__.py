@@ -1,4 +1,9 @@
-"""Core executor package containing NodeExecutor."""
+"""
+ノード実行エンジンを提供するモジュール。
+
+NodeExecutor は単体ノードの実行を担当する。
+パイプライン全体の制御とは分離されている。
+"""
 
 from typing import Dict, List
 import datetime
@@ -9,7 +14,22 @@ from ai_helper.core.context import Context
 from ai_helper.core.node import Node
 from ai_helper.core.repository.artifact_repository import ArtifactRepository
 
+"""
+NodeExecutor
 
+単一 Node の実行を担当するクラス。
+
+責務
+
+1 Node インスタンス生成
+2 Node 実行
+3 Artifact 型チェック
+4 実行ログ記録
+5 再試行処理
+
+PipelineExecutor が存在する場合でも
+Node 単体テストやデバッグ用途で使用できる。
+"""
 class NodeExecutor:
     """
     ノード定義またはインスタンスを実行するためのユーティリティクラス。
@@ -35,6 +55,16 @@ class NodeExecutor:
             self.nr_repo = NodeRunRepository(db_session)
             self.pr_repo = PipelineRunRepository(db_session)
 
+    # --------------------------------------------------
+    # Node 実行フロー
+    #
+    # 1 NodeDefinition → Node インスタンス生成
+    # 2 実行ログ開始
+    # 3 入力アーティファクト型チェック
+    # 4 Node.run() 実行
+    # 5 出力アーティファクト型チェック
+    # 6 実行メトリクス保存
+    # --------------------------------------------------
     def execute(
         self,
         node_or_def,
@@ -77,7 +107,8 @@ class NodeExecutor:
         attempts = 0
         while True:
             try:
-                # GPU check
+                # GPU利用可能かどうかを判定する
+                # PyTorch が存在する場合のみ CUDA 状態を確認する
                 if getattr(node.definition, "requires_gpu", False) and not _gpu_available():
                     # mark skipped in log and return immediately
                     if self.nr_repo is not None and last_run is not None:

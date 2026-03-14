@@ -1,4 +1,9 @@
-"""Core context subpackage."""
+"""
+パイプライン実行コンテキスト。
+
+Node 実行間でアーティファクトIDを共有するための
+コンテナを提供する。
+"""
 
 from typing import Dict
 
