@@ -1,8 +1,23 @@
-"""コマンドラインからパイプライン定義を読み込み実行するユーティリティ。
+"""
+パイプラインをCLIから実行するためのエントリーポイント。
 
-Python モジュールまたは YAML ファイルで定義されたパイプラインを受け取り、
-実行結果を標準出力に表示する。コンテキスト内のアーティファクト内容も
-簡易的にダンプされる。
+このモジュールはコマンドラインからパイプライン定義を読み込み、
+Pipeline を生成して実行するためのユーティリティを提供する。
+
+対応するパイプライン定義形式
+
+- Python module (.py)
+- YAML (.yaml / .yml)
+
+CLI層の責務は以下に限定する。
+
+1. CLI引数の取得
+2. Pipeline定義の読み込み
+3. Pipelineオブジェクト生成
+4. Pipelineの実行
+
+実際の処理ロジックは core 層 (Pipeline / Node) に委譲される。
+CLI層はビジネスロジックを持たない。
 """
 
 import argparse
@@ -17,22 +32,44 @@ from ai_helper.pipeline.models import PipelineDefinition
 
 
 def load_pipeline(path: str) -> Pipeline:
-    """指定パスからパイプラインを読み込んで ``Pipeline`` インスタンスを返す。
+    """指定パスからパイプラインを読み込み ``Pipeline`` を生成する。
+
+    パイプライン定義は複数の形式をサポートする。
+
+    - Python module
+    - YAML
+
+    Python module の場合は以下のパターンを探索する。
+
+    - ``pipeline`` : 既に生成済みの Pipeline
+    - ``definition`` : PipelineDefinition
+    - ``create_pipeline()`` : Pipeline生成関数
+
+    これにより、ユーザーは用途に応じて
+    declarative / imperative の両方のスタイルで
+    パイプラインを定義できる。
 
     Args:
-        path (str): Python モジュール (.py) または YAML (.yaml/.yml) のパス。
+        path: パイプライン定義ファイル
+
+    Returns:
+        Pipeline
+
     Raises:
-        ValueError: 読み込み失敗や形式不正の場合。
+        ValueError: 読み込み失敗や形式不正
     """
+    # Pythonモジュールとしてパイプラインをロードする
+    # ユーザー定義Pipelineを動的に読み込むため importlib を使用する
     if path.endswith(".py"):
         spec = importlib.util.spec_from_file_location("_pipeline_module", path)
         if spec is None or spec.loader is None:
             raise ValueError(f"cannot load module from {path}")
         module = importlib.util.module_from_spec(spec)
         sys.modules[spec.name] = module
-        spec.loader.exec_module(module)  # type: ignore
+        spec.loader.exec_module(module)
 
-        # いくつかの候補名を探す
+        # モジュール内からPipeline定義を探索する
+        # 複数の書き方を許可することでユーザーの自由度を確保する
         if hasattr(module, "pipeline"):
             return module.pipeline
         if hasattr(module, "definition"):
@@ -44,6 +81,8 @@ def load_pipeline(path: str) -> Pipeline:
             return Pipeline.from_definition(obj)
         raise ValueError("no pipeline object found in module")
 
+    # YAML形式のパイプライン定義を読み込む
+    # declarativeにPipelineを記述できるようにするための形式
     if path.endswith(('.yml', '.yaml')):
         try:
             import yaml
@@ -83,6 +122,13 @@ def load_pipeline(path: str) -> Pipeline:
 
 
 def main():
+    """CLIエントリーポイント。
+
+    CLI引数で指定されたパイプライン定義を読み込み、
+    Pipelineを実行する。
+
+    実行後は Context に格納された Artifact を簡易表示する。
+    """
     parser = argparse.ArgumentParser(description="Run an AI helper pipeline")
     parser.add_argument("pipeline", help="path to pipeline definition (py or yaml)")
     args = parser.parse_args()
@@ -94,13 +140,19 @@ def main():
     print(f"Loading pipeline from {path}")
     pipeline = load_pipeline(path)
 
+    # Artifact保存先としてローカルRepositoryを使用する
+    # CLI用途のデフォルト実装
     repo = LocalArtifactRepository()
+    
+    # Pipeline実行コンテキスト
     ctx = Context()
 
     print("starting run...")
     pipeline.run(ctx, repo)
     print("Pipeline finished")
 
+    # 実行結果として Context に格納された Artifact を表示する
+    # CLI利用時のデバッグ用途
     print("Artifacts in context:")
     for name, aid in ctx.artifacts.items():
         try:
