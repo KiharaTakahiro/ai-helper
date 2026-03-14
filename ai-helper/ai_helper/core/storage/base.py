@@ -4,7 +4,19 @@ from typing import Any
 
 class Storage(ABC):
     """
-    Base interface for storage backends.
+    データ保存の抽象インターフェース。
+
+    Storage は ArtifactRepository などの
+    Repository 層から利用される。
+
+    実装例:
+        - MemoryStorage
+        - FileStorage
+        - S3Storage
+        - RedisStorage
+
+    Storage はデータ保存のみを責務とし、
+    Artifact のメタデータ管理は行わない。
     """
 
     @abstractmethod
@@ -17,4 +29,8 @@ class Storage(ABC):
 
     @abstractmethod
     def delete(self, key: str) -> None:
+        pass
+
+    @abstractmethod
+    def exists(self, key: str) -> bool:
         pass

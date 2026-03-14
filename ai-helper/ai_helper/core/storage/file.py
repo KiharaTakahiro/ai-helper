@@ -6,7 +6,20 @@ from .base import Storage
 
 class FileStorage(Storage):
     """
-    File system storage backend.
+    ファイルシステムベースの Storage 実装。
+
+    指定された root_dir 配下にファイルを保存する。
+
+    Example
+    -------
+
+    root_dir = "artifacts"
+
+    save("frame1", data)
+
+    ↓
+
+    artifacts/frame1
     """
 
     def __init__(self, root_dir: str = "artifacts"):
@@ -49,3 +62,9 @@ class FileStorage(Storage):
 
         if os.path.exists(key):
             os.remove(key)
+    
+    def exists(self, key):
+        return super().exists(key)
+
+    def exists(self, key: str) -> bool:
+        return os.path.exists(self._path(key))

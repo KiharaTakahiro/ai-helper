@@ -24,3 +24,6 @@ class MemoryStorage(Storage):
     def delete(self, key: str) -> None:
 
         del self._store[key]
+    
+    def exists(self, key: str) -> bool:
+        return key in self._store

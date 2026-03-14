@@ -6,7 +6,24 @@ from ai_helper.core.repository.base import Repository
 
 class ArtifactRepository(Repository):
     """
-    Repository responsible for managing artifacts.
+    Artifact を管理するリポジトリ。
+
+    Node 実行結果として生成される Artifact の
+    保存・取得・削除・一覧取得を提供する。
+
+    Repository は Artifact ドメインと Storage 実装の
+    橋渡しを行う役割を持つ。
+
+    Responsibilities
+    ----------------
+    - Artifact メタデータの管理
+    - Storage へのデータ保存
+    - Artifact の取得
+
+    Notes
+    -----
+    現在はインメモリ index を使用している。
+    将来的には DB 永続化へ拡張可能。
     """
 
     def __init__(self, storage):
