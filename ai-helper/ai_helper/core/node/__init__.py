@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from ai_helper.core.context import Context
-from ai_helper.core.artifact.repository import ArtifactRepository
+from ai_helper.core.repository.artifact_repository import ArtifactRepository
 
 # プラグイン対応用に BaseNode から継承
 from ai_helper.core.node.base_node import BaseNode
