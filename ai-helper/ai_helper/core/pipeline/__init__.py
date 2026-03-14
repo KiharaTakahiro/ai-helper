@@ -10,7 +10,7 @@ import tracemalloc
 from typing import Dict, List
 
 from ai_helper.core.context import Context
-from ai_helper.core.artifact.repository import ArtifactRepository
+from ai_helper.core.repository.artifact_repository import ArtifactRepository
 from ai_helper.core.node import Node
 
 
