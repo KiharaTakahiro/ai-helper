@@ -27,10 +27,8 @@ import datetime
 import hashlib
 import json
 import threading
-import time
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import tracemalloc
 from typing import Dict, List
 
 from ai_helper.core.context import Context
@@ -38,15 +36,6 @@ from ai_helper.core.repository.artifact_repository import ArtifactRepository
 from ai_helper.core.node import Node
 
 logger = logging.getLogger(__name__)
-# GPU availability helper (same logic as in node_executor for consistency)
-def _gpu_available():
-    try:
-        import torch
-
-        return torch.cuda.is_available()
-    except ImportError:
-        return False
-
 
 def _topological_sort(deps: Dict[str, List[str]]) -> List[str]:
     """依存関係グラフをトポロジカルソートする。
@@ -100,55 +89,81 @@ class Pipeline:
 
     @classmethod
     def from_definition(cls, pd, node_factory=None, initial_artifacts: Dict[str, str] = None):
-        """PipelineDefinition から Pipeline インスタンスを作成する。
+        """
+        PipelineDefinition（設定データ）から実行可能なPipelineインスタンスを生成する。
 
-        トポロジカルソートと簡単な検証を行う。
+        主な処理内容：
+        - ノード間の依存関係（DAG）を構築
+        - トポロジカルソートにより実行順序を決定
+        - NodeFactoryを用いてノードをインスタンス化
+        - 入出力の簡易的な静的検証を実施
         """
         from ai_helper.core.registry.factory import NodeFactory
 
+        # Node生成用のFactory（未指定ならデフォルト）を使用
         node_factory = node_factory or NodeFactory()
-        # build graph
+        # -------------------------
+        # 依存関係マップの構築
+        # -------------------------
         deps = {}
-        # capture original ordering while constructing deps
+
+        # definitionからdepends_onを取得
         for idx, d in enumerate(pd.nodes):
             deps[d.node_id] = list(d.depends_on)
-        # if a node has no explicit dependencies, link it to its immediate
-        # predecessor to preserve definition order as a default execution
-        # behavior. This makes simple pipelines run sequentially without
-        # requiring the user to manually specify depends_on lists.
+
+        # depends_on未指定のノードは直前ノードに依存させる（順次実行のため）
         for idx, d in enumerate(pd.nodes):
             if idx > 0 and not deps.get(d.node_id):
                 prev = pd.nodes[idx - 1]
                 deps[d.node_id].append(prev.node_id)
+        # -------------------------
+        # 実行順序の決定（DAGソート）
+        # -------------------------
         sorted_ids = _topological_sort(deps)
-        # instantiate nodes in order
+        
+        # -------------------------
+        # ノードの生成と検証
+        # -------------------------
         nodes = []
         produced_outputs = {}
         for nid in sorted_ids:
+            # node_idからdefinitionを取得
             d = next(filter(lambda x: x.node_id == nid, pd.nodes))
+            # Nodeインスタンス生成
             node = node_factory.create(d.node_type, d.config)
+            # definitionを保持（実行時参照用)
             node.definition = d
             nodes.append(node)
-            # basic static validation: check that inputs either come from previous nodes or
-            # appear in initial_artifacts (if provided)
+
+            # -------------------------
+            # 入力検証（静的チェック）
+            # -------------------------
             inputs = []
             if hasattr(node, 'inputs'):
                 if isinstance(node.inputs, dict):
                     inputs = list(node.inputs.keys())
                 else:
                     inputs = list(node.inputs)
+
             for inp in inputs:
                 if initial_artifacts is not None:
+                    # 外部から渡される入力を許可
                     if inp in initial_artifacts:
-                        # type check if typing information present
+                        # 型チェック（定義がある場合）
                         exp = node.inputs[inp] if isinstance(node.inputs, dict) else None
                         if exp and initial_artifacts[inp] != exp:
-                            raise TypeError(f"initial artifact '{inp}' type mismatch: {initial_artifacts[inp]} != {exp}")
+                            logger.error(f"initial artifact '{inp}' type mismatch: {initial_artifacts[inp]} が {exp}と異なります")
+                            raise TypeError(f"initial artifact '{inp}' type mismatch: {initial_artifacts[inp]} が {exp}と異なります")
                         continue
+                    
+                    # 型チェック（定義がある場合）
                     if inp not in produced_outputs:
-                        raise ValueError(f"Input artifact '{inp}' for node '{nid}' is not produced by any preceding node or provided initial artifacts")
-                # if no initial_artifacts provided we skip existence check - assume runtime context will supply
-            # record outputs
+                        logger.error(f"Input artifact '{inp}' のノードID: '{nid}' の型が不一致")
+                        raise ValueError(f"Input artifact '{inp}' のノードID: '{nid}' の型が不一致")
+
+            # -------------------------
+            # 出力の記録
+            # -------------------------
             outputs = []
             if hasattr(node, 'outputs'):
                 if isinstance(node.outputs, dict):
@@ -157,6 +172,9 @@ class Pipeline:
                     outputs = list(node.outputs)
             for out in outputs:
                 produced_outputs[out] = True
+        # -------------------------
+        # Pipeline生成
+        # -------------------------
         pipeline = cls(nodes)
         pipeline.definition = pd
         return pipeline
