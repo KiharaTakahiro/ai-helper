@@ -28,6 +28,7 @@ import hashlib
 import json
 import threading
 import time
+import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import tracemalloc
 from typing import Dict, List
@@ -36,7 +37,7 @@ from ai_helper.core.context import Context
 from ai_helper.core.repository.artifact_repository import ArtifactRepository
 from ai_helper.core.node import Node
 
-
+logger = logging.getLogger(__name__)
 # GPU availability helper (same logic as in node_executor for consistency)
 def _gpu_available():
     try:
@@ -218,12 +219,14 @@ class Pipeline:
         - タイプ検証
         - メトリクス収集
         """
-        # optional repositories
+        logger.info("[開始] パイプラインの実行")
         pr_repo = None
         nr_repo = None
+        
+        # DB セッションが提供されている場合はパイプラインランとノードランのレコードを作成して状態管理する
         if db_session is not None:
             from ai_helper.repository import PipelineRunRepository, NodeRunRepository
-
+            logger.info("DBセッションが提供されているため、パイプラインランとノードランのレコードを作成して状態管理を行う")
             pr_repo = PipelineRunRepository(db_session)
             nr_repo = NodeRunRepository(db_session)
             pipeline_id = getattr(self, "definition", None)
@@ -231,47 +234,38 @@ class Pipeline:
             pr = pr_repo.create(pipeline_id)
             pr_repo.update_status(pr.id, "RUNNING")
 
-        # if any node lacks a definition we don't know dependencies or ids,
-        # fall back to original sequential behavior for compatibility.
-        if not all(hasattr(n, 'definition') for n in self.nodes):
-            last_node_run = None
-            try:
-                for node in self.nodes:
-                    # validate inputs (old style)
-                    for inp in getattr(node, "inputs", []):
-                        if inp not in context.artifacts:
-                            raise ValueError(
-                                f"Node {node.__class__.__name__} requires artifact '{inp}'"
-                            )
-                    # use executor for consistency
-                    if nr_repo is not None:
-                        last_node_run = nr_repo.create(pr.id, node.__class__.__name__)
-                        nr_repo.update_status(last_node_run.id, "RUNNING")
-                    # direct call since we only have node instance
-                    node_executor.execute(node, context, pipeline_run_id=pr.id if pr_repo is not None else None)
-                    if nr_repo is not None and last_node_run is not None:
-                        nr_repo.update_status(last_node_run.id, "SUCCESS", finished_at=datetime.datetime.now(datetime.UTC))
-                if pr_repo is not None:
-                    pr_repo.update_status(pr.id, "SUCCESS", finished_at=datetime.datetime.now(datetime.UTC))
-                return
-            except Exception:
-                if nr_repo is not None and last_node_run is not None:
-                    nr_repo.update_status(last_node_run.id, "FAILED", finished_at=datetime.datetime.now(datetime.UTC))
-                if pr_repo is not None:
-                    pr_repo.update_status(pr.id, "FAILED", finished_at=datetime.datetime.now(datetime.UTC))
-                raise
-
-        # build dependency map from attached definitions
+        # definition に定義された depends_on をもとに、
+        # ノード間の依存関係マップ（DAG）を構築する
+        #
+        # deps の形式：
+        #   deps[node_id] = [依存ノードID, ...]
+        #
+        # 例：
+        #   deps = {
+        #       "step1": [],
+        #       "step2": ["step1"],
+        #   }
+        #
+        # → step1 完了後に step2 が実行される
         deps = {}
-        # preserve ordering of self.nodes when building map
+
+        # self.nodes の順序を維持しつつ依存関係を構築
         for idx, node in enumerate(self.nodes):
             nid = getattr(node, 'definition', None).node_id if hasattr(node, 'definition') else None
             if nid is not None:
+                # depends_on をそのままコピー（空リストも含む）
                 deps[nid] = list(getattr(node.definition, 'depends_on', []))
-        # add implicit sequential links for nodes without any explicit
-        # dependencies so that pipelines defined as simple ordered lists
-        # still execute in order rather than being eligible for parallel
-        # scheduling.
+
+        # depends_on が空のノードに対しては、
+        # 前のノードへの依存関係を暗黙的に追加する
+        #
+        # これにより、単純なリスト形式で定義されたパイプラインでも
+        # 上から順番に実行されるようにする（並列実行を防ぐ）
+        # 注意：
+        # depends_on を指定しない場合、
+        # ノードは自動的に直列実行される。
+        # 並列にしたい場合は依存関係を明示すること。
+        # 先頭ノードを並列としたい場合は、ダミーノードを使用して並列化させること
         for idx, node in enumerate(self.nodes):
             nid = getattr(node, 'definition', None).node_id if hasattr(node, 'definition') else None
             if nid is None:
@@ -282,72 +276,109 @@ class Pipeline:
                 if prev_id is not None:
                     deps[nid].append(prev_id)
 
+        logger.info(f"ノード間の依存関係: {deps}")
+
+        # 実行中ノード
         in_progress = {}
+        # 完了ノード
         completed = set()
+        # 並列実行時の排他制御
         lock = threading.Lock()
 
-        # use NodeExecutor for actual execution logic
+        # Node の実行ロジックを担当する Executor を生成
+        # （リトライ、ログ、メトリクス収集などはここで処理される）
         from ai_helper.core.executor import NodeExecutor
         node_executor = NodeExecutor(artifact_repo, db_session=db_session)
 
+        # ノード1つ分の実行処理
+        # ThreadPoolExecutor から呼ばれ、並列実行される可能性があるため、ローカル変数で必要なリポジトリをキャプチャして渡す 
         def _execute(node: Node):
             nonlocal pr_repo, nr_repo, pr
+            # ノードIDを取得（definitionが無い場合はクラス名を使用）
             nid = getattr(node, 'definition', None).node_id if hasattr(node, 'definition') else node.__class__.__name__
-            # delegate to executor (it handles retries, GPU, metrics, logging etc.)
+
+            # 実際のノード処理は NodeExecutor に委譲する
             outputs = node_executor.execute(node, context, pipeline_run_id=pr.id if pr_repo is not None else None)
             with lock:
+                # 完了したノードを記録（並列実行のため排他制御）
                 completed.add(nid)
             return outputs
 
-        # executor for parallel tasks
+        # 並列実行用のスレッドプールを生成
         executor = ThreadPoolExecutor()
+        # 実行中タスク（Future）とノードの対応を保持
         futures = {}
 
+        # メインの実行ループ
+        # すべてのノードが完了するまで繰り返す
         try:
             while len(completed) < len(self.nodes):
-                # schedule all ready nodes
+
+                # 実行可能なノードをスケジューリング
                 for node in self.nodes:
                     nid = getattr(node, 'definition', None).node_id if hasattr(node, 'definition') else None
+
+                    # 既に完了済み、または実行中のノードはスキップ
                     if nid in completed or nid in in_progress:
+                        logger.debug(f"ノード '{nid}' はすでに完了済みまたは実行中のためスキップ")
                         continue
+
+                    # 依存ノードがすべて完了しているかチェック 
                     deps_ok = all(d in completed for d in deps.get(nid, []))
                     if not deps_ok:
+                        logger.debug(f"ノード '{nid}' は依存ノードが未完了のためスキップ (依存: {deps.get(nid, [])}, 完了: {completed})")
                         continue
-                    # check cache
+                    
+                    # NOTE: キャッシュ利用は高速化には便利な一方ノードの副作用を考慮する必要がある
+                    # 現時点で考慮できていないが、今後ノードにキャッシュを使用してよいかのフラグを持つなど対応が必要
+
+                    # キャッシュ確認（同じ入力なら再実行しない）
                     key = self._compute_cache_key(node, context)
                     if key in self.cache:
-                        # restore outputs
+                        # キャッシュから結果を復元
                         for name, aid in self.cache[key].items():
+                            logger.info(f"ノード '{nid}' はキャッシュヒットのため再実行せず、出力 '{name}' をアーティファクトID '{aid}' で復元")
                             context.set_artifact(name, aid)
                         completed.add(nid)
                         continue
-                    # schedule execution
+
+                    # ノードを並列実行としてスケジュール
+                    logger.info(f"ノード '{nid}' をスケジューリング（依存関係: {deps.get(nid, [])}）")
                     fut = executor.submit(_execute, node)
+
+                    # 実行中タスクとして管理
                     futures[fut] = node
                     in_progress[nid] = fut
+
+                # 実行可能なノードが無いのに未完了ノードがある場合
+                # → 循環依存の可能性
                 if not futures and len(completed) < len(self.nodes):
-                    # deadlock? possible cycle not detected earlier
-                    raise RuntimeError("No runnable nodes found - possible cycle")
-                # wait for at least one future to complete before continuing loop
+                     logger.error("実行可能なノードがないのに未完了ノードが存在します。循環依存の可能性があります。")
+                     raise RuntimeError("実行可能なノードがないが未完了ノードが存在します。循環依存の可能性があります。")
+ 
+                # 少なくとも1つのノードが完了するまで待機
                 if futures:
                     from concurrent.futures import wait, FIRST_COMPLETED
 
                     done_set, _ = wait(futures.keys(), return_when=FIRST_COMPLETED)
+
                     for fut in done_set:
                         node = futures.pop(fut)
                         nid = getattr(node, 'definition', None).node_id if hasattr(node, 'definition') else None
+
+                        # 実行中リストから削除
                         in_progress.pop(nid, None)
+                        # 実行結果取得（例外もここで発生する）
                         outputs = fut.result()
-                        # record in cache
+                        # 結果をキャッシュに保存
                         key = self._compute_cache_key(node, context)
                         self.cache[key] = outputs
         except Exception:
-            # mark failure on last node run if exists
-            if nr_repo is not None and 'last_run' in locals() and last_run is not None:
-                nr_repo.update_status(last_run.id, "FAILED", finished_at=datetime.datetime.now(datetime.UTC))
+            # パイプライン全体を失敗状態にする
             if pr_repo is not None:
                 pr_repo.update_status(pr.id, "FAILED", finished_at=datetime.datetime.now(datetime.UTC))
             raise
         finally:
+            # パイプライン全体を失敗状態にする
             executor.shutdown(wait=False)
-        # success
+            logger.info("[完了] パイプラインの実行")
