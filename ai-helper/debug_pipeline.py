@@ -1,36 +1,33 @@
-from ai_helper.infra.db.session import create_sqlite_session
-from ai_helper.core.pipeline import Pipeline
-from ai_helper.infra.storage.local_repository import LocalArtifactRepository
-from ai_helper.pipeline.repository import PipelineRepository
-from ai_helper.core.registry import NodeFactory
-from ai_helper.core.context import Context
-from ai_helper.core.registry import register_node
-from ai_helper.nodes.video.video_input_node import VideoInputNode
-from ai_helper.nodes.video.frame_extract_node import FrameExtractNode
+# debug_pipeline.py
 
-# register nodes as API does
-def register_demo_nodes():
-    register_node("video_input", VideoInputNode)
-    register_node("frame_extract", FrameExtractNode)
+from ai_helper.core.pipeline import Pipeline
+from ai_helper.core.context import Context
+from ai_helper.core.repository.artifact_repository import ArtifactRepository
+
+from ai_helper.nodes.video_input_node import VideoInputNode
+
+
+def create_node(node_id, depends_on=None):
+    node = VideoInputNode(video_path="test.mp4")
+
+    # definitionを付ける
+    node.definition = type("Def", (), {})()
+    node.definition.node_id = node_id
+    node.definition.depends_on = depends_on or []
+
+    return node
+
+
+def main():
+    node1 = create_node("step1")
+
+    pipeline = Pipeline(nodes=[node1])
+
+    context = Context()
+    repo = ArtifactRepository()
+
+    pipeline.run(context, repo)
 
 
 if __name__ == "__main__":
-    session = create_sqlite_session()
-    print("session", session)
-
-    repo = PipelineRepository()
-    definition = repo.get_pipeline("demo")
-    print("definition", definition)
-
-    register_demo_nodes()
-    # build pipeline using new helper (handles DAG/depends_on)
-    pipeline = Pipeline.from_definition(definition)
-    pipeline.definition = definition
-
-    artifact_repo = LocalArtifactRepository()
-    context = Context()
-    pipeline.run(context, artifact_repo, db_session=session)
-
-    from ai_helper.infra.db.models import PipelineRun, NodeRun, Artifact
-
-    print("counts", session.query(PipelineRun).count(), session.query(NodeRun).count(), session.query(Artifact).count())
+    main()
