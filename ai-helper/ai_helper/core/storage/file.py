@@ -6,65 +6,198 @@ from .base import Storage
 
 class FileStorage(Storage):
     """
-    ファイルシステムベースの Storage 実装。
+    ローカルファイルシステムを使用した Storage 実装クラス。
 
-    指定された root_dir 配下にファイルを保存する。
+    -----------------------------
+    ■ このクラスの役割
+    -----------------------------
+    ArtifactRepository から渡されたデータを、
+    「実際にファイルとして保存・取得・削除」する責務を持つ。
 
-    Example
-    -------
+    Repository が「論理管理」なのに対して、
+    Storage は「物理保存」を担当する。
 
+    -----------------------------
+    ■ 保存イメージ
+    -----------------------------
     root_dir = "artifacts"
 
-    save("frame1", data)
+    save("image/frame1.png", data)
 
-    ↓
+    ↓ 実際に保存されるパス
 
-    artifacts/frame1
+    artifacts/image/frame1.png
+
+    -----------------------------
+    ■ key と path の違い（重要）
+    -----------------------------
+    key:
+        Repository から渡される「論理キー」
+        例: "image/frame1.png"
+
+    path:
+        実際のファイルパス
+        例: "artifacts/image/frame1.png"
+
+    -----------------------------
+    ■ 注意点
+    -----------------------------
+    - key はそのままファイル名として使われる
+    - ディレクトリ構造も key に含めることができる
     """
 
-    def __init__(self, root_dir: str = "artifacts"):
+    def __init__(self, root_directory: str = "artifacts"):
+        """
+        FileStorage を初期化する。
 
-        self.root_dir = root_dir
+        -----------------------------
+        ■ Args
+        -----------------------------
+        root_directory (str):
+            ファイルを保存するルートディレクトリ
 
-        os.makedirs(self.root_dir, exist_ok=True)
+        -----------------------------
+        ■ 処理内容
+        -----------------------------
+        - ルートディレクトリを作成（存在しなければ）
+        """
 
-    def _path(self, key: str) -> str:
+        self.root_directory = root_directory
 
-        return os.path.join(self.root_dir, key)
+        # 保存先ディレクトリを作成（既に存在する場合は何もしない）
+        os.makedirs(self.root_directory, exist_ok=True)
 
-    def save(self, key: str, data: Any) -> str:
+    def _build_file_path(self, artifact_key: str) -> str:
+        """
+        Artifact のキーから実際のファイルパスを生成する。
 
-        path = self._path(key)
+        -----------------------------
+        ■ Args
+        -----------------------------
+        artifact_key (str):
+            Artifact の識別キー
 
-        os.makedirs(os.path.dirname(path), exist_ok=True)
+        -----------------------------
+        ■ Returns
+        -----------------------------
+        str:
+            実際のファイルパス
+        """
 
+        return os.path.join(self.root_directory, artifact_key)
+
+    def save(self, artifact_key: str, data: Any) -> str:
+        """
+        データをファイルとして保存する。
+
+        -----------------------------
+        ■ 処理の流れ
+        -----------------------------
+        1. ファイルパスを生成
+        2. 必要なディレクトリを作成
+        3. データ型に応じて書き込み方法を分岐
+        4. 保存したパスを返す
+
+        -----------------------------
+        ■ Args
+        -----------------------------
+        artifact_key (str):
+            保存する Artifact のキー
+
+        data (Any):
+            保存するデータ
+
+        -----------------------------
+        ■ Returns
+        -----------------------------
+        str:
+            保存されたファイルのパス（URIとして扱う）
+        """
+
+        # -------------------------
+        # ① 保存先パス生成
+        # -------------------------
+        file_path = self._build_file_path(artifact_key)
+
+        # -------------------------
+        # ② ディレクトリ作成
+        # -------------------------
+        # 例: artifacts/image/frame1.png の場合
+        # artifacts/image を作る
+        directory_path = os.path.dirname(file_path)
+        os.makedirs(directory_path, exist_ok=True)
+
+        # -------------------------
+        # ③ データ保存
+        # -------------------------
         if isinstance(data, bytes):
-
-            with open(path, "wb") as f:
-                f.write(data)
-
+            # バイナリデータとして保存（画像・音声など）
+            with open(file_path, "wb") as file:
+                file.write(data)
         else:
+            # テキストデータとして保存
+            with open(file_path, "w", encoding="utf-8") as file:
+                file.write(str(data))
 
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(str(data))
+        return file_path
 
-        return path
+    def load(self, file_path: str) -> Any:
+        """
+        ファイルを読み込み、データを返す。
 
-    def load(self, key: str) -> Any:
+        -----------------------------
+        ■ 注意（重要）
+        -----------------------------
+        ここで受け取るのは「keyではなく path（URI）」である。
 
-        path = key
+        なぜなら Repository がすでに path を管理しているため。
 
-        with open(path, "rb") as f:
+        -----------------------------
+        ■ Args
+        -----------------------------
+        file_path (str):
+            読み込むファイルのパス
 
-            return f.read()
+        -----------------------------
+        ■ Returns
+        -----------------------------
+        Any:
+            読み込まれたデータ（bytes）
+        """
 
-    def delete(self, key: str) -> None:
+        with open(file_path, "rb") as file:
+            return file.read()
 
-        if os.path.exists(key):
-            os.remove(key)
-    
-    def exists(self, key):
-        return super().exists(key)
+    def delete(self, file_path: str) -> None:
+        """
+        ファイルを削除する。
 
-    def exists(self, key: str) -> bool:
-        return os.path.exists(self._path(key))
+        -----------------------------
+        ■ Args
+        -----------------------------
+        file_path (str):
+            削除対象のファイルパス
+        """
+
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+    def exists(self, artifact_key: str) -> bool:
+        """
+        指定したキーのファイルが存在するかを確認する。
+
+        -----------------------------
+        ■ Args
+        -----------------------------
+        artifact_key (str):
+            確認対象のキー
+
+        -----------------------------
+        ■ Returns
+        -----------------------------
+        bool:
+            存在する場合 True
+        """
+
+        file_path = self._build_file_path(artifact_key)
+        return os.path.exists(file_path)

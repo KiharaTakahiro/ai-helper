@@ -1,7 +1,7 @@
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
-def setup_logging(self, log_directory='./logs', log_file_name='ai_helper.log', log_level=logging.INFO, log_rotation_when='midnight', log_rotation_term=1, log_backup_count=7):
+def setup_logging(log_directory='./logs', log_file_name='ai_helper.log', log_level=logging.INFO, log_rotation_when='midnight', log_rotation_term=1, log_backup_count=7):
     """ロギングの設定を行う関数"""
     # ログのディレクトリが存在しない場合は作成
     log_directory.mkdir(exist_ok=True)
