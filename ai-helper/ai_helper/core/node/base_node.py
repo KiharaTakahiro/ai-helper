@@ -15,6 +15,7 @@ class BaseNode(ABC):
         tags (List[str]): 検索やフィルタリングに利用するタグ。
         inputs (List[str] | Dict[str,str]): 期待する入力アーティファクト。
         outputs (List[str] | Dict[str,str]): 生成する出力アーティファクト。
+        definition: 任意のノード定義情報（例: 入力/出力の詳細仕様など）。
     """
 
     # クラス属性によるデフォルト値
@@ -22,6 +23,7 @@ class BaseNode(ABC):
     tags: List[str] = []
     inputs: list = []
     outputs: list = []
+    definition = None
 
     def __init__(self, name: str | None = None, tags: list[str] | None = None,
                  inputs: list | dict | None = None, outputs: list | dict | None = None):

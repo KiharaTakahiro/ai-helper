@@ -3,7 +3,7 @@ from ai_helper.core.node.base_node import BaseNode
 from ai_helper.core.context import Context
 
 
-class VoiceNode(Node):
+class VoiceNode(BaseNode):
     inputs = ["audio"]
     outputs = ["processed_audio"]
 
