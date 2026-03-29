@@ -1,9 +1,9 @@
-from ai_helper.core.node import Node
+from ai_helper.core.node.base_node import BaseNode
 from ai_helper.core.context import Context
 from ai_helper.core.repository.artifact_repository import ArtifactRepository
 
 
-class VideoInputNode(Node):
+class VideoInputNode(BaseNode):
     """動画ファイルパスを取り込み、アーティファクト化するサンプルノード。
 
     Attributes:
@@ -26,7 +26,7 @@ class VideoInputNode(Node):
         """
         self.video_path = video_path
 
-    def run(self, context: Context, artifact_repo: ArtifactRepository):
+    def execute(self, context: Context, artifact_repo: ArtifactRepository):
         """実行時処理。
 
         ファイルパス文字列をアーティファクトとして保存し、

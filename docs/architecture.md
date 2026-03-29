@@ -125,7 +125,7 @@ Output Artifact
 ```python
 class ExampleNode(Node):
 
-    def run(self, ctx, repo):
+    def execute(self, ctx, repo):
         # Node処理
         pass
 ```

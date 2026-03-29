@@ -7,7 +7,7 @@ from ai_helper.core.registry.node_registry import NodeRegistry
 _global_registry = NodeRegistry()
 
 # 旧 API としてエクスポートされていた辞書参照
-NODE_REGISTRY = _global_registry._by_name
+NODE_REGISTRY = _global_registry._nodes_by_name
 
 
 def register_node(name_or_cls, node_cls=None):

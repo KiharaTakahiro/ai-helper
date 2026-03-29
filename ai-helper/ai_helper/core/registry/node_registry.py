@@ -221,11 +221,6 @@ class NodeRegistry:
         if node_class is BaseNode:
             return
 
-        # 旧 Node クラスも除外
-        from ai_helper.core.node import Node as LegacyNode
-        if node_class is LegacyNode:
-            return
-
         # -------------------------
         # ノード名決定
         # -------------------------

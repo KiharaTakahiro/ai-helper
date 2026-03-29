@@ -1,11 +1,11 @@
 # ダミー実装（AI処理なし）
 
-from ai_helper.core.node import Node
+from ai_helper.core.node.base_node import BaseNode
 from ai_helper.core.context import Context
 from ai_helper.core.repository.artifact_repository import ArtifactRepository
 
 
-class FrameExtractNode(Node):
+class FrameExtractNode(BaseNode):
     """動画ファイルからフレームを抽出してアーティファクト化するサンプルノード。
 
     このノードは動画ファイル ("video" アーティファクト) を入力として受け取り、
@@ -30,7 +30,7 @@ class FrameExtractNode(Node):
     inputs = ["video"]
     outputs = ["frames"]
 
-    def run(self, context: Context, artifact_repo: ArtifactRepository):
+    def execute(self, context: Context, artifact_repo: ArtifactRepository):
         """ノード実行時に呼ばれるエントリポイント。
 
         Args:

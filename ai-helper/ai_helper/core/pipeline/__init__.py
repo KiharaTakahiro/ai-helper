@@ -33,8 +33,7 @@ from typing import Dict, List
 
 from ai_helper.core.context import Context
 from ai_helper.core.repository.artifact_repository import ArtifactRepository
-from ai_helper.core.node import Node
-
+from ai_helper.core.node.base_node import BaseNode
 logger = logging.getLogger(__name__)
 
 
@@ -53,11 +52,11 @@ class Pipeline:
             ノード実行結果キャッシュ
             key -> outputs
 
-        _node_map (Dict[str, Node]):
-            node_id → Node インスタンス
+        _node_map (Dict[str, BaseNode]):
+            node_id → BaseNode インスタンス
     """
 
-    def __init__(self, nodes: List[Node]):
+    def __init__(self, nodes: List[BaseNode]):
         """
         Pipeline を初期化する。
 
@@ -172,7 +171,7 @@ class Pipeline:
         # 3. Node インスタンス生成
         # ------------------------------------------------------------
         # 実際に実行する Node オブジェクトを作る
-        node_instances: List[Node] = []
+        node_instances: List[BaseNode] = []
 
         # すでに生成された出力（artifact）を記録する
         # → 後続ノードの入力チェックに使用する
@@ -621,7 +620,7 @@ class Pipeline:
 
     def _validate_node_inputs_static(
         self,
-        node_instance: Node,
+        node_instance: BaseNode,
         produced_output_artifacts: Dict[str, bool],
         initial_artifacts: Dict[str, str]
     ):
@@ -765,7 +764,7 @@ class Pipeline:
             # produced_output_artifacts に存在する場合は問題なし
             # → 次の入力へ
 
-    def _compute_cache_key(self, node: Node, context: Context):
+    def _compute_cache_key(self, node: BaseNode, context: Context):
         """
         Node 実行結果をキャッシュするためのキー（識別子）を生成する。
 
@@ -1007,7 +1006,7 @@ class Pipeline:
         # ------------------------------------------------------------
         # 5. ノード1件を実行する関数（スレッドから呼ばれる）
         # ------------------------------------------------------------
-        def execute_single_node(target_node: Node):
+        def execute_single_node(target_node: BaseNode):
             """
             単一ノードの実行処理。
 

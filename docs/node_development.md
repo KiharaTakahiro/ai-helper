@@ -40,15 +40,15 @@ Nodeは以下を直接扱わない。
 例
 
 ```python
-from ai_helper.core.node import Node
+from ai_helper.core.node.base_node import BaseNode
 
 
-class ExampleNode(Node):
+class ExampleNode(BaseNode):
     """
     ExampleNode はサンプルNodeである。
     """
 
-    def run(self, ctx, repo):
+    def execute(self, ctx, repo):
         """
         Node処理を実行する。
 
@@ -68,10 +68,10 @@ class ExampleNode(Node):
 
 # 3. runメソッド
 
-Nodeの処理は `run()` メソッドに実装する。
+Nodeの処理は `execute()` メソッドに実装する。
 
 ```
-def run(self, ctx, repo):
+def execute(self, ctx, repo):
 ```
 
 引数
@@ -132,7 +132,7 @@ ctx.artifacts["output_image"] = artifact_id
 ```python
 class UppercaseNode(Node):
 
-    def run(self, ctx, repo):
+    def execute(self, ctx, repo):
 
         input_id = ctx.artifacts["input_text"]
 

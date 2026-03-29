@@ -1,12 +1,12 @@
 from ai_helper.core.registry import register_node
-from ai_helper.core.node import Node
+from ai_helper.core.node.base_node import BaseNode
 from ai_helper.core.context import Context
 
 # runtime を呼び出すためにインポート（スタブ）
 from ai_helper.runtimes.faceswap import FaceSwapRuntime
 
 
-class FaceSwapNode(Node):
+class FaceSwapNode(BaseNode):
     """フレームリストを受け取り顔差し替え済みフレームを出力するノード。"""
 
     name = "faceswap"
@@ -18,7 +18,7 @@ class FaceSwapNode(Node):
     def __init__(self, **config):
         self.config = config
 
-    def run(self, context: Context, artifact_repo):
+    def execute(self, context: Context, artifact_repo):
         aid = context.get_artifact("frames")
         frames = artifact_repo.load(aid)
         swapped = FaceSwapRuntime.swap(frames, **self.config)

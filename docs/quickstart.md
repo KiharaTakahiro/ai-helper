@@ -144,12 +144,12 @@ Artifact生成
 例
 
 ```python
-from ai_helper.core.node import Node
+from ai_helper.core.node.base_node import BaseNode
 
 
-class UppercaseNode(Node):
+class UppercaseNode(BaseNode):
 
-    def run(self, ctx, repo):
+    def execute(self, ctx, repo):
 
         input_id = ctx.artifacts["input"]
 

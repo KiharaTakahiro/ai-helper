@@ -16,7 +16,8 @@ import time
 import tracemalloc
 
 from ai_helper.core.context import Context
-from ai_helper.core.node import Node
+from ai_helper.core.node.base_node import BaseNode
+
 from ai_helper.core.repository.artifact_repository import ArtifactRepository
 import logging
 
@@ -176,7 +177,7 @@ class NodeExecutor:
         # ① Nodeインスタンスの準備
         # ==================================================
         # NodeDefinition が渡された場合は、実行可能な Node に変換する
-        if not isinstance(node_or_definition, Node):
+        if not isinstance(node_or_definition, BaseNode):
             from ai_helper.core.registry.factory import NodeFactory
 
             node_factory = NodeFactory()
@@ -266,7 +267,7 @@ class NodeExecutor:
                 # ノードの本処理を実行
                 # ------------------------------------------
                 # 実際のビジネスロジックはここ
-                node_instance.run(
+                node_instance.execute(
                     execution_context,
                     self.artifact_repository
                 )
@@ -348,7 +349,7 @@ class NodeExecutor:
             for output_name in output_name_list
         }
 
-    def _validate_input_types(self, node_instance: Node, execution_context: Context):
+    def _validate_input_types(self, node_instance: BaseNode, execution_context: Context):
         """
         ノード実行前に「入力アーティファクトの型」を検証する内部メソッド。
 
@@ -465,7 +466,7 @@ class NodeExecutor:
                     f"型不一致: '{input_name}' は '{actual_type}' だが '{expected_type}' を期待"
                 )
 
-    def _validate_output_types(self, node_instance: Node, execution_context: Context):
+    def _validate_output_types(self, node_instance: BaseNode, execution_context: Context):
         """
         ノード実行後に「出力アーティファクトの型」を検証する内部メソッド。
 

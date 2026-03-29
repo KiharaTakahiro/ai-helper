@@ -1,5 +1,5 @@
 from .core.context import Context
-from .core.node import Node
+from .core.node.base_node import BaseNode
 from .core.pipeline import Pipeline
 
 from .core.repository.artifact_repository import ArtifactRepository
@@ -15,7 +15,7 @@ from .infra.config.settings import get_settings
 
 __all__ = [
     "Context",
-    "Node",
+    "BaseNode",
     "Pipeline",
     "ArtifactRepository",
     "LocalArtifactRepository",

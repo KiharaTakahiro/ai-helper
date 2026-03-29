@@ -1,10 +1,10 @@
-from ai_helper.core.node import Node
+from ai_helper.core.node.base_node import BaseNode
 from ai_helper.core.context import Context
 from ai_helper.core.repository.artifact_repository import ArtifactRepository
 from ai_helper.core.registry import register_node
 
 
-class EncodeVideoNode(Node):
+class EncodeVideoNode(BaseNode):
     """動画またはフレームリストを受け取りエンコード済みデータを出力するノード。
 
     Attributes:
@@ -34,7 +34,7 @@ class EncodeVideoNode(Node):
         """
         self.config = config
 
-    def run(self, context: Context, artifact_repo: ArtifactRepository):
+    def execute(self, context: Context, artifact_repo: ArtifactRepository):
         """ノード実行時のエントリポイント。
 
         Args:

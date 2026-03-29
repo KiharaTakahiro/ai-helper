@@ -1,9 +1,9 @@
-from ai_helper.core.node import Node
+from ai_helper.core.node.base_node import BaseNode
 from ai_helper.core.context import Context
 from ai_helper.core.repository.artifact_repository import ArtifactRepository
 
 
-class ResizeVideoNode(Node):
+class ResizeVideoNode(BaseNode):
     """動画やフレームをリサイズするダミーノード。
 
     実際のリサイズ処理は後で実装する。
@@ -19,7 +19,7 @@ class ResizeVideoNode(Node):
     def __init__(self, **config):
         self.config = config
 
-    def run(self, context: Context, artifact_repo: ArtifactRepository):
+    def execute(self, context: Context, artifact_repo: ArtifactRepository):
         try:
             aid = context.get_artifact("video")
             video = artifact_repo.load(aid)

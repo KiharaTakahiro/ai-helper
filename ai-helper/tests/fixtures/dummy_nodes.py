@@ -6,7 +6,7 @@ class AddNode(BaseNode):
     inputs = ["a", "b"]
     outputs = ["result"]
 
-    def run(self, context, repo):
+    def execute(self, context, repo):
         result = int(context.get_artifact("a")) + int(context.get_artifact("b"))
         context.set_artifact("result", str(result))
 
@@ -14,7 +14,7 @@ class AddNode(BaseNode):
 class ErrorNode(BaseNode):
     """必ず失敗するノード（例外処理テスト用）"""
 
-    def run(self, context, repo):
+    def execute(self, context, repo):
         raise RuntimeError("意図的なエラー")
 
 
@@ -27,7 +27,7 @@ class RetryNode(BaseNode):
         super().__init__()
         self.count = 0
 
-    def run(self, context, repo):
+    def execute(self, context, repo):
         self.count += 1
         if self.count == 1:
             raise RuntimeError("初回失敗")
