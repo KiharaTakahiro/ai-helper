@@ -1037,7 +1037,7 @@ class Pipeline:
 
             # ステータスを「実行中」に更新
             pipeline_run_repository.update_status(
-                pipeline_run_record.id,
+                pipeline_run_record.pipeline_id,
                 "RUNNING"
             )
 
@@ -1096,7 +1096,7 @@ class Pipeline:
                 target_node,
                 context,
                 pipeline_run_id=(
-                    pipeline_run_record.id
+                    pipeline_run_record.pipeline_id
                     if pipeline_run_record else None
                 )
             )
@@ -1217,7 +1217,7 @@ class Pipeline:
             # DB連携している場合は FAILED に更新
             if pipeline_run_repository:
                 pipeline_run_repository.update_status(
-                    pipeline_run_record.id,
+                    pipeline_run_record.pipeline_id,
                     "FAILED",
                     finished_at=datetime.datetime.now(datetime.UTC)
                 )

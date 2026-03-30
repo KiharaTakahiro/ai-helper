@@ -15,8 +15,7 @@ class PipelineRun(Base):
 
     __tablename__ = "pipeline_run"
 
-    id = Column(String, primary_key=True)
-    pipeline_id = Column(String, nullable=False)
+    pipeline_id = Column(String, primary_key=True)
     status = Column(String, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.UTC))
     finished_at = Column(DateTime, nullable=True)
@@ -30,7 +29,7 @@ class NodeRun(Base):
     __tablename__ = "node_run"
 
     id = Column(String, primary_key=True)
-    pipeline_run_id = Column(String, ForeignKey("pipeline_run.id"), nullable=False)
+    pipeline_id = Column(String, ForeignKey("pipeline_run.pipeline_id"), nullable=False)
     node_type = Column(String, nullable=False)
     status = Column(String, nullable=False)
     started_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.UTC))

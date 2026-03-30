@@ -113,8 +113,9 @@ class NodeDefinition:
                     "requires_gpu": True
                 }
         """
+        # IDがない場合はUUIDを生成して返す。node_type/typeはどちらか必須で、typeがあればnode_typeとしても使う
         return cls(
-            node_id=data.get("node_id"),
+            node_id=data.get("node_id", str(uuid.uuid4())),
             node_type=cls._snake(data.get("node_type") or data.get("type")),
             config=data.get("config", {}),
             depends_on=data.get("depends_on", []),
@@ -129,6 +130,14 @@ class PipelineDefinition:
 
     id: str
     nodes: List[NodeDefinition] = field(default_factory=list)
+    
+    def __eq__(self, other):
+        if not isinstance(other, PipelineDefinition):
+            return False
+        return self.id == other.id and self.nodes == other.nodes
+
+    def __repr__(self):
+        return f"PipelineDefinition(id={self.id!r}, nodes={self.nodes!r})"
 
     @classmethod
     def from_dict(cls, data: dict) -> "PipelineDefinition":
@@ -152,4 +161,5 @@ class PipelineDefinition:
         nodes = [
             NodeDefinition.from_dict(node_data) for node_data in data.get("nodes", [])
         ]
-        return cls(id=data["id"], nodes=nodes)
+        # idがない場合はUUIDを生成して返す
+        return cls(id=data.get("id", str(uuid.uuid4())), nodes=nodes)
