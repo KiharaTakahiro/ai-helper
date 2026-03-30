@@ -35,6 +35,8 @@ from ai_helper.pipeline.models import PipelineDefinition
 from ai_helper.core.context import Context
 from ai_helper.core.repository.artifact_repository import ArtifactRepository
 from ai_helper.core.node.base_node import BaseNode
+from ai_helper.utils import load_yml, load_json
+
 logger = logging.getLogger(__name__)
 
 
@@ -65,17 +67,31 @@ class Pipeline:
             nodes (List[Node]):
                 実行対象のノード一覧
         """
+        # node_id → node のマッピングを事前構築
+        node_map = {}
+        for tmp_node in nodes:
+            definition = getattr(tmp_node, "definition", None)
+            # NodeDefinitionの存在確認
+            if definition is None:
+                raise ValueError(f"Node {tmp_node}には definition 属性がありません。PipelineDefinition を持つ Node を渡してください。")
+            
+            node_id = getattr(definition, "node_id", None)
+            # node_idの存在確認
+            if node_id is None:
+                raise ValueError(f"Node {tmp_node}には node_id がありません。")
+            # node_idの重複確認
+            if node_id in node_map:
+                raise ValueError(f"Node {node_id} は既に存在します。")
+
+            node_map[node_id] = tmp_node
+
+        self._node_map = node_map
         self.nodes = nodes
         self.cache = {}
 
-        # node_id → node のマッピングを事前構築
-        self._node_map = {
-            getattr(n, 'definition', None).node_id: n
-            for n in nodes if hasattr(n, 'definition')
-        }
 
     @classmethod
-    def from_json(cls, path: str, node_factory=None, initial_artifacts=None):
+    def from_json(cls, path: str, node_factory=None, initial_artifacts=None) -> "Pipeline":
       """
       JSON 定義ファイルから Pipeline を生成する。
 
@@ -84,19 +100,11 @@ class Pipeline:
           node_factory (NodeFactory, optional): ノード生成用のファクトリ
           initial_artifacts (Dict[str, str], optional): 初期アーティファクト
       """
-      if path.endswith('.json'):
-          logger.error("ファイルパスが.jsonで終わっていません。")
-          raise ValueError("JSON ファイルの拡張子は .json でなければなりません。")
-      try:
-          with open(path, 'r') as file:
-              pipeline_definition = json.load(file)
-      except Exception as e:
-          logger.error(f"JSON ファイルの読み込みに失敗しました: {e}")
-          raise
+      pipeline_definition = load_json(path)
       return cls.from_dict(pipeline_definition, node_factory=node_factory, initial_artifacts=initial_artifacts)
 
     @classmethod
-    def from_yml(cls, path: str, node_factory=None, initial_artifacts=None):
+    def from_yml(cls, path: str, node_factory=None, initial_artifacts=None) -> "Pipeline":
         """
         YML 定義ファイルから Pipeline を生成する。
 
@@ -108,21 +116,7 @@ class Pipeline:
         Returns:
             Pipeline: 生成された Pipeline インスタンス
         """
-        if path.endswith('.yml') or path.endswith('.yaml'):
-            logger.error("ファイルパスが.ymlまたは.yamlで終わっていません。")
-            raise ValueError("YML ファイルの拡張子は .yml または .yaml でなければなりません。")
-
-        try: 
-          import yaml
-          with open(path, 'r') as file:
-              pipeline_definition = yaml.safe_load(file)
-        except ImportError:
-          logger.error("PyYAML がインストールされていません。'pip install pyyaml' でインストールしてください。")
-          raise
-        except Exception as e:
-          logger.error(f"YML ファイルの読み込みに失敗しました: {e}")
-          raise
-
+        pipeline_definition = load_yml(path)
         return cls.from_dict(
             pipeline_definition,
             node_factory=node_factory,
@@ -130,7 +124,7 @@ class Pipeline:
         )
 
     @classmethod
-    def from_dict(cls, dict: dict, node_factory=None, initial_artifacts=None):
+    def from_dict(cls, dict: dict, node_factory=None, initial_artifacts=None) -> "Pipeline":
         """
         辞書定義から Pipeline を生成する。
 
@@ -151,7 +145,7 @@ class Pipeline:
         pipeline_definition: PipelineDefinition,
         node_factory=None,
         initial_artifacts: Dict[str, str] = None
-    ):
+    ) -> "Pipeline":
         """
         PipelineDefinition（設定データ）から、実行可能な Pipeline インスタンスを生成する。
 
