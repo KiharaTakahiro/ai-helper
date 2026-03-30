@@ -105,47 +105,7 @@ def load_pipeline(path: str) -> Pipeline:
     # YAML形式のパイプライン定義を読み込む
     # declarativeにPipelineを記述できるようにするための形式
     if path.endswith(('.yml', '.yaml')):
-        try:
-            import yaml
-        except ImportError:
-            raise ValueError("YAML support requires PyYAML; please install it")
-        with open(path, 'r', encoding='utf-8') as f:
-            data = yaml.safe_load(f)
-        # simple preprocessing: allow nodes as list of strings (class names)
-        if isinstance(data, dict) and "nodes" in data:
-            raw_nodes = data["nodes"]
-            from ai_helper.pipeline.models import NodeDefinition
-
-            # Node class 名から registry lookup 用の type 名を生成する
-            #
-            # Example
-            #   VideoInputNode -> video_input
-            #   FrameExtractNode -> frame_extract
-            #
-            # NodeRegistry は snake_case の type 名でノードを検索するため
-            # YAML定義では class名ベースでも書けるようにしている
-            def _snake(name: str) -> str:
-                # remove trailing "Node" if present
-                if name.endswith("Node"):
-                    name = name[: -len("Node")]
-                import re
-
-                s1 = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
-                return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
-
-            processed = []
-            if isinstance(raw_nodes, list):
-                for idx, item in enumerate(raw_nodes):
-                    if isinstance(item, str):
-                        processed.append(NodeDefinition(type=_snake(item), order=idx))
-                    elif isinstance(item, dict):
-                        processed.append(NodeDefinition(**item))
-                    else:
-                        raise ValueError(f"unsupported node entry in yaml: {item}")
-                data["nodes"] = processed
-        # assume dict convertible to PipelineDefinition
-        pd = PipelineDefinition(**data)
-        return Pipeline.from_definition(pd)
+        return Pipeline.from_yml(path)
 
     raise ValueError(f"unsupported pipeline file type: {path}")
 

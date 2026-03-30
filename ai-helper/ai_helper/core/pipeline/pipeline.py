@@ -31,6 +31,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 from typing import Dict, List
 
+from ai_helper.pipeline.models import PipelineDefinition
 from ai_helper.core.context import Context
 from ai_helper.core.repository.artifact_repository import ArtifactRepository
 from ai_helper.core.node.base_node import BaseNode
@@ -74,9 +75,80 @@ class Pipeline:
         }
 
     @classmethod
+    def from_json(cls, path: str, node_factory=None, initial_artifacts=None):
+      """
+      JSON 定義ファイルから Pipeline を生成する。
+
+      Args:
+          path (str): JSON 定義ファイルのパス
+          node_factory (NodeFactory, optional): ノード生成用のファクトリ
+          initial_artifacts (Dict[str, str], optional): 初期アーティファクト
+      """
+      if path.endswith('.json'):
+          logger.error("ファイルパスが.jsonで終わっていません。")
+          raise ValueError("JSON ファイルの拡張子は .json でなければなりません。")
+      try:
+          with open(path, 'r') as file:
+              pipeline_definition = json.load(file)
+      except Exception as e:
+          logger.error(f"JSON ファイルの読み込みに失敗しました: {e}")
+          raise
+      return cls.from_dict(pipeline_definition, node_factory=node_factory, initial_artifacts=initial_artifacts)
+
+    @classmethod
+    def from_yml(cls, path: str, node_factory=None, initial_artifacts=None):
+        """
+        YML 定義ファイルから Pipeline を生成する。
+
+        Args:
+            path (str): YML 定義ファイルのパス
+            node_factory (NodeFactory, optional): ノード生成用のファクトリ
+            initial_artifacts (Dict[str, str], optional): 初期アーティファクト
+
+        Returns:
+            Pipeline: 生成された Pipeline インスタンス
+        """
+        if path.endswith('.yml') or path.endswith('.yaml'):
+            logger.error("ファイルパスが.ymlまたは.yamlで終わっていません。")
+            raise ValueError("YML ファイルの拡張子は .yml または .yaml でなければなりません。")
+
+        try: 
+          import yaml
+          with open(path, 'r') as file:
+              pipeline_definition = yaml.safe_load(file)
+        except ImportError:
+          logger.error("PyYAML がインストールされていません。'pip install pyyaml' でインストールしてください。")
+          raise
+        except Exception as e:
+          logger.error(f"YML ファイルの読み込みに失敗しました: {e}")
+          raise
+
+        return cls.from_dict(
+            pipeline_definition,
+            node_factory=node_factory,
+            initial_artifacts=initial_artifacts
+        )
+
+    @classmethod
+    def from_dict(cls, dict: dict, node_factory=None, initial_artifacts=None):
+        """
+        辞書定義から Pipeline を生成する。
+
+        Args:
+            dict (dict): パイプライン定義を表す辞書
+            node_factory (NodeFactory, optional): ノード生成用のファクトリ
+            initial_artifacts (Dict[str, str], optional): 初期アーティファクト
+
+        Returns:
+            Pipeline: 生成された Pipeline インスタンス
+        """
+        pipeline_definition = PipelineDefinition.from_dict(dict)
+        return cls.from_definition(pipeline_definition, node_factory=node_factory, initial_artifacts=initial_artifacts)
+
+    @classmethod
     def from_definition(
         cls,
-        pipeline_definition,
+        pipeline_definition: PipelineDefinition,
         node_factory=None,
         initial_artifacts: Dict[str, str] = None
     ):

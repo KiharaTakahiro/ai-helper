@@ -79,9 +79,77 @@ class NodeDefinition:
         )
 
 
+    @classmethod
+    def _snake(cls, name: str) -> str:
+        """ Node class 名から registry lookup 用の type 名を生成する
+        
+         Example
+           VideoInputNode -> video_input
+           FrameExtractNode -> frame_extract
+        
+         NodeRegistry は snake_case の type 名でノードを検索するため
+         YAML定義では class名ベースでも書けるようにしている
+        """
+        if name.endswith("Node"):
+            name = name[: -len("Node")]
+        import re
+
+        s1 = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
+        return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "NodeDefinition":
+        """辞書から NodeDefinition を生成するユーティリティ。
+
+        Args:
+            data (dict): ノード定義を表す辞書。例:
+                {
+                    "node_id": "node1",
+                    "node_type": "typeA",
+                    "config": {"param": 1},
+                    "depends_on": ["node0"],
+                    "retry_count": 3,
+                    "retry_delay": 5.0,
+                    "requires_gpu": True
+                }
+        """
+        return cls(
+            node_id=data.get("node_id"),
+            node_type=cls._snake(data.get("node_type") or data.get("type")),
+            config=data.get("config", {}),
+            depends_on=data.get("depends_on", []),
+            retry_count=data.get("retry_count", 0),
+            retry_delay=data.get("retry_delay", 0.0),
+            requires_gpu=data.get("requires_gpu", False),
+        )
+
 @dataclass
 class PipelineDefinition:
     """ノードリストを持つパイプライン定義"""
 
     id: str
     nodes: List[NodeDefinition] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "PipelineDefinition":
+        """辞書から PipelineDefinition を生成するユーティリティ。
+
+        Args:
+            data (dict): パイプライン定義を表す辞書。例:
+                {
+                    "id": "my_pipeline",
+                    "nodes": [
+                        {
+                            "node_id": "node1",
+                            "node_type": "typeA",
+                            "config": {"param": 1},
+                            "depends_on": []
+                        },
+                        ...
+                    ]
+                }
+        """
+        nodes = [
+            NodeDefinition.from_dict(node_data) for node_data in data.get("nodes", [])
+        ]
+        return cls(id=data["id"], nodes=nodes)

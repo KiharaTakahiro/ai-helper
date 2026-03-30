@@ -122,7 +122,7 @@ class NodeExecutor:
         ④ リトライ付き実行ループ
             - GPUチェック
             - 入力型チェック
-            - node.run() 実行
+            - node.execute() 実行
             - 出力型チェック
         ⑤ メトリクス計測終了
         ⑥ 成功ログ更新
@@ -204,10 +204,16 @@ class NodeExecutor:
         logger.info(f"[開始] ノード実行: {node_id}")
 
         # ==================================================
+        # ① バリデーション
+        # ==================================================
+        node_instance.validate(execution_context, self.artifact_repository)
+
+        # ==================================================
         # ② 実行メトリクス計測開始
         # ==================================================
         # 実行時間測定開始（高精度タイマー）
         execution_start_time = time.perf_counter()
+        logger.info(f"ノード実行開始: {node_id} (開始時刻={execution_start_time:.4f})")
 
         # メモリ使用量の追跡開始
         tracemalloc.start()
@@ -267,6 +273,9 @@ class NodeExecutor:
                 # ノードの本処理を実行
                 # ------------------------------------------
                 # 実際のビジネスロジックはここ
+                logger.info(f"ノード実行: {node_id} (試行回数={current_attempt_count})")
+                logger.debug(f"ノード定義: {getattr(node_instance, 'definition', None)}")
+                logger.debug(f"実行コンテキスト: {execution_context}")
                 node_instance.execute(
                     execution_context,
                     self.artifact_repository
@@ -320,6 +329,10 @@ class NodeExecutor:
         tracemalloc.stop()
 
         total_execution_time = time.perf_counter() - execution_start_time
+        logger.info(
+            f"ノード実行完了: {node_id} (実行時間={total_execution_time:.4f}秒, "
+            f"ピークメモリ使用量={peak_memory_usage / 1024:.2f} KB)"
+        )
 
         # ==================================================
         # ⑥ 成功ログ更新

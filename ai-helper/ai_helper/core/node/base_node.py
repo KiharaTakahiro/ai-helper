@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List
-
+from ai_helper.pipeline.models import NodeDefinition
 
 class BaseNode(ABC):
     """プラグイン対応のノード基底クラス。
@@ -23,7 +23,7 @@ class BaseNode(ABC):
     tags: List[str] = []
     inputs: list = []
     outputs: list = []
-    definition = None
+    definition: NodeDefinition = None
 
     def __init__(self, name: str | None = None, tags: list[str] | None = None,
                  inputs: list | dict | None = None, outputs: list | dict | None = None):
@@ -121,6 +121,19 @@ class BaseNode(ABC):
         # ------------------------------------------------------------
         if not isinstance(cls.tags, list):
             raise TypeError("tags は文字列のリストで指定する必要があります（例: ['nlp', 'image']）")
+
+    def validate(self, context, runtime):
+        """ノード実行前のバリデーション処理。
+
+        デフォルトでは何もしないが、必要に応じてサブクラスでオーバーライドして
+        入力アーティファクトの存在チェックや前提条件の検証を行うことができる。
+        バリデーションに失敗した場合は例外を投げるべきである。
+
+        Args:
+            context: 実行コンテキストオブジェクト。
+            runtime: ランタイムやリポジトリ等の環境オブジェクト。
+        """
+        pass
 
     @abstractmethod
     def execute(self, context, runtime):
