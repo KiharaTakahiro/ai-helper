@@ -22,7 +22,6 @@ class PipelineRepository:
         """
 
         if pipeline_id == "demo":
-            # example DAG: video_input -> frame_extract
             return PipelineDefinition(
                 id="demo",
                 nodes=[

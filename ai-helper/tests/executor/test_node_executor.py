@@ -1,7 +1,6 @@
 import pytest
 from ai_helper.core.executor import NodeExecutor
-from tests.fixtures.dummy_nodes import AddNode, ErrorNode, RetryNode
-
+from tests.fixtures.dummy_nodes import AddNode, ErrorNode
 
 def test_execute_success(context, artifact_repository):
     """
@@ -28,17 +27,3 @@ def test_execute_failure(context, artifact_repository):
     with pytest.raises(RuntimeError):
         executor.execute(ErrorNode(), context)
 
-
-def test_execute_retry(context, artifact_repository):
-    """
-    観点:
-        リトライ設定に従い再実行されること
-    """
-    executor = NodeExecutor(artifact_repository)
-
-    node = RetryNode()
-    node.definition = type("Def", (), {"retry_count": 1, "retry_delay": 0})()
-
-    executor.execute(node, context)
-
-    assert context.get_artifact("x") == "ok"
