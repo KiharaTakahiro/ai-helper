@@ -1,8 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional
 import uuid
-
-
+from typing import Dict, Any
 class NodeDefinition:
     """パイプライン構成の各ノードを表すクラス。
 
@@ -26,17 +25,13 @@ class NodeDefinition:
         *,
         node_id: Optional[str] = None,
         node_type: Optional[str] = None,
-        type: Optional[str] = None,
-        config: Optional[dict] = None,
+        config: Optional[Dict[str, Any]] = None,
         order: Optional[int] = None,
         depends_on: Optional[List[str]] = None,
         retry_count: int = 0,
         retry_delay: float = 0.0,
         requires_gpu: bool = False,
     ):
-        # backward compatibility: allow ``type`` and ``order`` parameters
-        if node_type is None and type is not None:
-            node_type = type
         if node_type is None:
             raise ValueError("node_type/type must be provided")
 
@@ -80,7 +75,7 @@ class NodeDefinition:
 
 
     @classmethod
-    def _snake(cls, name: str) -> str:
+    def _normalize_node_type(cls, name: str) -> str:
         """ Node class 名から registry lookup 用の type 名を生成する
         
          Example
@@ -113,10 +108,12 @@ class NodeDefinition:
                     "requires_gpu": True
                 }
         """
+        if "node_type" not in data:
+            raise ValueError("node_typeは必須項目です")
         # IDがない場合はUUIDを生成して返す。node_type/typeはどちらか必須で、typeがあればnode_typeとしても使う
         return cls(
             node_id=data.get("node_id", str(uuid.uuid4())),
-            node_type=cls._snake(data.get("node_type") or data.get("type")),
+            node_type=cls._normalize_node_type(data.get("node_type")),
             config=data.get("config", {}),
             depends_on=data.get("depends_on", []),
             retry_count=data.get("retry_count", 0),
