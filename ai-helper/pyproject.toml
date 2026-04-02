@@ -10,6 +10,7 @@ python = "^3.12"
 fastapi = "^0.101.1"
 uvicorn = {extras = ["standard"], version = "^0.22.0"}
 sqlalchemy = "^2.0"
+media-utils = {git = "https://github.com/KiharaTakahiro/media_utils.git"}
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.0"
