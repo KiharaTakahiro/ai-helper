@@ -29,6 +29,29 @@ def load_yml(path: str) -> dict:
       logger.error(f"YML ファイルの読み込みに失敗しました: {e}")
       raise
 
+def create_yml(path: str, data: dict):
+    """
+        YMLファイルを作成する
+
+        Args:
+            path (str): ymlファイルの出力パス
+            data (dict): ymlファイルの内容
+    """
+    if not (path.endswith('.yml') or path.endswith('.yaml')):
+        logger.error("ファイルパスが.ymlまたは.yamlで終わっていません。")
+        raise ValueError("YML ファイルの拡張子は .yml または .yaml でなければなりません。")
+
+    try:
+        import yaml
+        with open(path, 'w') as file:
+            yaml.dump(data, file, default_flow_style=False, allow_unicode=True)
+    except ImportError:
+        logger.error("PyYAML がインストールされていません。'pip install pyyaml' でインストールしてください。")
+        raise
+    except Exception as e:
+        logger.error(f"YML ファイルの作成に失敗しました: {e}")
+        raise
+
 def load_json(path) -> dict:
     """
       JSON ファイルを読み込むユーティリティ関数。
@@ -50,6 +73,25 @@ def load_json(path) -> dict:
         logger.error(f"JSON ファイルの読み込みに失敗しました: {e}")
         raise
 
+def create_json(path, data):
+    """
+        JSONファイルを作成する
+
+        Args:
+            path (str): JSONファイルの出力パス
+            data (dict): JSONファイルの内容
+    """
+    import json
+    if not path.endswith('.json'):
+        logger.error("ファイルパスが.jsonで終わっていません。")
+        raise ValueError("JSON ファイルの拡張子は .json でなければなりません。")
+    try:
+        with open(path, 'w') as file:
+            json.dump(data, file, indent=4, ensure_ascii=False)
+    except Exception as e:
+        logger.error(f"JSON ファイルの作成に失敗しました: {e}")
+        raise
+    
 def extract(input_path, output_path, **kwargs):
     """
     動画ファイルから音声を抽出する。
